@@ -8,7 +8,7 @@ An interactive browser-based astrological calculation engine for precise natal c
 
 ### Chart Mode (Single Natal Chart Analysis)
 
-1. **Open Application**: Load `starmatch.html` in a modern browser
+1. **Open Application**: Load `starmatch.html` in a modern browser [try it here](https://twobob.github.io/starmatch/starmatch.html)
 2. **Optional: Configure Engine Settings**:
    - **Orb Type**: Aspect-based (default) or Planet-based
    - **Aspect Orb Set**: Select tolerance levels for aspect detection
