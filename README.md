@@ -4,6 +4,45 @@
 
 An interactive browser-based astrological calculation engine for precise natal chart analysis and relationship compatibility research. Starmatch combines astronomical accuracy with traditional astrological interpretation, offering configurable calculation parameters and quantitative comparison methods.
 
+## Usage
+
+### Chart Mode (Single Natal Chart Analysis)
+
+1. **Open Application**: Load `starmatch.html` in a modern browser
+2. **Optional: Configure Engine Settings**:
+   - **Orb Type**: Aspect-based (default) or Planet-based
+   - **Aspect Orb Set**: Select tolerance levels for aspect detection
+   - **Rulership System**: Ancient (traditional), Modern, or Alternative modern
+   - **Precession Correction**: Enable for sidereal adjustment (optional)
+3. **Enter Birth Data**:
+   - Date, time (24-hour format recommended)
+   - Location: Use search icon for geocoding or enter lat/lon manually
+4. **Calculate**: Click **Calculate Chart**
+5. **Analyze Results**:
+   - **Positions**: Planetary longitudes in zodiacal degrees
+   - **Chart Wheel**: Visual representation with aspects
+   - **Themes**: 12-sign strength distribution (bar chart)
+   - **Aspects**: Detected aspects with orbs
+   - **Traditional Factors**: Elemental/quality/polarity counts
+   - **Dominants**: Strongest polarity, element, and quality
+6. **Save Record**: Click **Save** to store chart for comparison
+
+### Starmatch Mode (Relationship Compatibility)
+
+1. **Prerequisite**: Save at least 2 natal chart records
+2. **Switch Mode**: Click **Starmatch Mode** button
+3. **Select Charts**:
+   - **Subject**: Choose first person's chart
+   - **Target**: Choose second person's chart
+4. **Compare**: Click **Compare Charts**
+5. **Interpret Results**:
+   - **xProfile Value**: Similarity-complementarity metric
+   - **Relationship Type**: Similar / Balanced / Complementary / Inverted
+   - **Theme Comparison**: Side-by-side bar chart showing differences
+   - **Overlay Chart**: Both charts displayed simultaneously (blue vs red)
+6. **Quick Test**: Press `0` key to auto-load first two records and compare
+
+
 ## Core Files
 
 ### Application
@@ -89,54 +128,14 @@ An interactive browser-based astrological calculation engine for precise natal c
 - **Auto-fill**: Latitude/longitude populated from search results
 - **No API key required**: Free public geocoding service
 
-## Usage
-
-### Chart Mode (Single Natal Chart Analysis)
-
-1. **Open Application**: Load `starmatch.html` in a modern browser (Chrome, Firefox, Edge, Safari)
-2. **Configure Engine Settings**:
-   - **Orb Type**: Aspect-based (default) or Planet-based
-   - **Aspect Orb Set**: Select tolerance levels for aspect detection
-   - **Rulership System**: Ancient (traditional), Modern, or Alternative modern
-   - **Precession Correction**: Enable for sidereal adjustment (optional)
-3. **Enter Birth Data**:
-   - Date, time (24-hour format recommended)
-   - Location: Use search icon for geocoding or enter lat/lon manually
-4. **Calculate**: Click **Calculate Chart**
-5. **Analyze Results**:
-   - **Positions**: Planetary longitudes in zodiacal degrees
-   - **Chart Wheel**: Visual representation with aspects
-   - **Themes**: 12-sign strength distribution (bar chart)
-   - **Aspects**: Detected aspects with orbs
-   - **Traditional Factors**: Elemental/quality/polarity counts
-   - **Dominants**: Strongest polarity, element, and quality
-6. **Save Record**: Click **Save** to store chart for comparison
-
-### Starmatch Mode (Relationship Compatibility)
-
-1. **Prerequisite**: Save at least 2 natal chart records
-2. **Switch Mode**: Click **Starmatch Mode** button
-3. **Select Charts**:
-   - **Subject**: Choose first person's chart
-   - **Target**: Choose second person's chart
-4. **Compare**: Click **Compare Charts**
-5. **Interpret Results**:
-   - **xProfile Value**: Similarity-complementarity metric
-   - **Relationship Type**: Similar / Balanced / Complementary / Inverted
-   - **Theme Comparison**: Side-by-side bar chart showing differences
-   - **Overlay Chart**: Both charts displayed simultaneously (blue vs red)
-6. **Quick Test**: Press `0` key to auto-load first two records and compare
-
 ### Research Workflow
 
 For investigating astrological hypotheses:
 
 1. **Build Dataset**: Save multiple charts in each category (e.g., married couples, siblings, parent-child)
-2. **Configure Consistently**: Use same engine settings across comparisons
-3. **Systematic Comparison**: Compare all pairs within and between categories
-4. **Record xProfile Values**: Note similarity-complementarity spectrum for each pair
-5. **Statistical Analysis**: Look for patterns (e.g., do long-term partners cluster near xProfile = 0?)
-6. **Parameter Testing**: Re-run with different orb sets, rulership systems, or precession on/off
+2. **Record xProfile Values**: Note similarity-complementarity spectrum for each pair
+3. **Statistical Analysis**: Look for patterns (e.g., do long-term partners cluster near xProfile = 0?)
+4. **Parameter Testing**: Re-run with different orb sets, rulership systems, or precession on/off
 
 ## Technical Details
 
@@ -217,18 +216,11 @@ Aspects are subdivisions of a circle, weighted by their geometric properties:
 
 ## Browser Compatibility
 
-**Supported Browsers**:
-- Chrome/Edge (v90+)
-- Firefox (v88+)
-- Safari (v14+)
-- Opera (v76+)
-
 **Requirements**:
 - JavaScript enabled
 - ES6+ support (arrow functions, template literals, async/await)
 - localStorage API (for data persistence)
 - Canvas API (for chart wheel rendering)
-- Fetch API (for CDN library loading)
 
 **Not Supported**: Internet Explorer (all versions)
 
@@ -247,9 +239,10 @@ The tool's configurable parameters allow systematic variation of calculation met
 
 ## License & Attribution
 
+- **Starmatch Engine**:  MIT License © 2016-2025 Original astrological calculation algorithm  Will 18
+- **Starmatch visualiser**:  MIT License © 2016-2025 Twobob
 - **Astronomy Engine**: MIT License © 2019-2023 Don Cross
 - **OpenStreetMap Nominatim**: ODbL © OpenStreetMap contributors
-- **Starmatch Engine**: Original astrological calculation algorithm
 
 ## References
 
