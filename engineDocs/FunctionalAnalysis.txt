@@ -1,0 +1,75 @@
+The StarMatch program functional analysis describes a chart in the form of a
+combination of quadratic and linear functions, each set expressive of a particular
+peak or trough in the graphical chart.
+
+Consider the function described as
+
+xoffset = 11 (the xoffset value varies according to function)
+
+x element of [11, 3], centre 0
+Q fn: y = 0.26458(x-xoffset)^2+-1.09561(x-xoffset)+1.55441
+
+The rule to get the actual value of x to substitute in the function is:
+1) for each element x in the series 11, 0, 1, 2, 3
+2) subtract the offset (here 11)
+3) substitute the resulting values modulo 12 in the function (i.e. if < 0 add 12;
+if >11 subtract 12).
+
+	x	x-xoffset	mod 12		y
+	11	0		0		1.55441
+	0	-11		1		0.72338
+	1	-10		2		0.42391
+	2	-9		3		0.65690
+	3	-8		4		1.40525
+
+here we see a trough with minimum at theme 3 and maxima at themes 12 and 4.
+The minimum does not coincide with the actual value 0 (theme 1) since the
+above quadratic calculation neglects the contribution from the L and R linear
+functions.
+
+The default behaviour of the engine is to use a value of 1/sqrt(2) to combine the
+values of the quadratic and appropriate left or right linear function:
+
+fnRatio = 1/Math.sqrt(2)
+
+where the values 0 = quadratic only and  1 = linear only: the resulting values are
+
+y = (1-fnRatio)*quadraticValue + fnRatio*linearValue
+
+In actual operation the following output was obtained for the particular trough
+characterised above:
+
+x element of [11, 3], centre 0
+
+Q fn: y = 0.26458(x-11)^2+-1.09561(x-11)+1.55441
+L fn: y = -1.60025(x-11)+1.79612
+R fn: y = 0.34815(x-0)+0.21708
+
+Loc.	Predict		Real		% error
+x = 11 	y = 1.55441	1.79612 	-15.55046
+x = 0	y = 0.72337	0.19587 	72.92311
+x = 1	y = 0.4215	0.55371 	-31.36666
+x = 2	y = 0.64878	1.00001 	-54.13654
+x = 3	y = 1.40522	1.20757 	14.06526
+
+This, it will be noted, is a particularly inaccurate example, although it has now
+correctly located the trough minimum location, theme 1. A more typical example
+describing a subsequent trough taken from the same chart analysis gives (note the
+different xoffset values)
+
+x element of [6, 9], centre 8 
+
+Q fn: y = 0.06204(x-6)^2+-0.45293(x-6)+3.52031
+L fn: y = -0.37879(x-6)+3.53291
+R fn: y = 0.05698(x-8)+2.71279
+
+Loc.	Predict		Real		% error
+x = 6 	y = 3.52031 	3.47037		1.41841
+x = 7 	y = 3.12941 	3.2792		-4.78672
+x = 8 	y = 2.86258 	2.71279		5.23291
+x = 9 	y = 2.71983 	2.76977		-1.83585
+
+
+
+
+

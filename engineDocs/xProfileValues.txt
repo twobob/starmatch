@@ -1,0 +1,26 @@
+xProfile output values -  an interpretation (from statistically insignificant data).
+
+
+The basis of relationship type is indicated as follows:
+
+	1	|------		similarity
+		|
+		|
+		|
+	0	|------		equality
+		|
+		|
+		|
+	-1	|------		complementarity
+
+Positive values indicate increasing similarity, negative ones increasing
+complementarity. relationships may be based on either, but Longer-
+lasting or more significant ones are emphasised by the results being a
+balance between similarity and complementarity, the results being nearer
+to zero. The original postulation and indeed experientially, it seems 
+that extreme left or right placings are those with whom, though a good 
+relationship may occur, will not likely be 'partners'.
+
+Those whose charts are similar in broad respects have charts of the same
+shape as the subject; those with complementary charts have shape inverted
+relative to the subject, is another observation.

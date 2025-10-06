@@ -1,0 +1,93 @@
+aoindex		Aspect Orb Index
+Selects one of a group of aspect orbs (angular distance between planets) applied to the respective aspect, in order:
+
+Conjunction, opposition, trine, square, sextile, semi-square, semi-sextile.
+
+Note that irregular aspects, whose effect may be variable, are ignored (sesquiquadrate and quincunx).
+
+aoindex	aspect orb value, degrees
+0)		9 9 7 7 5 3 3				default aspect orbs
+1)		9 9 9 9 6 2 3
+2)		10.8 10.0 8.3 7.5 5.7 2.5 1.5
+3)		10 8 6 6 4 5 1 1
+4)		2.6 2.5 2.3 2.3 1.3 1 1
+
+
+tfindex	Traditional Factors index
+Selects allocation of either ancient (default) or modern planets' traditional factors.
+
+Sign			Ancient allocations (index 0)
+			Ruler	Exaltation	Detriment	Fall
+Aries		Mars	Sun			Venus		Saturn
+Taurus		Venus	Moon		Mars		none
+Gemini		Mercury	none		Jupiter		none
+Cancer		Moon	Jupiter		Saturn		Mars
+Leo			Sun		none		Saturn		none
+Virgo		Mercury	Mercury		Jupiter		Venus
+Libra		Venus	Saturn		Mars		Sun
+Scorpio		Mars	none		Venus		Moon
+Sagittarius	Jupiter	none		Mercury		none
+Capricorn	Saturn	Mars		Moon		Jupiter
+Aquarius	Saturn	none		Sun			none
+Pisces		Jupiter	Venus		Mercury		Mercury
+			
+Sign			Modern allocations (index 4)
+			Ruler	Exaltation	Detriment	Fall
+Aries		Mars	Pluto		Venus		Saturn
+Taurus		Venus	Moon		Pluto		Uranus
+Gemini		Mercury	none		Jupiter		none
+Cancer		Moon	Jupiter		Saturn		Mars
+Leo			Sun		Neptune		Uranus		none
+Virgo		Mercury	Mercury		Neptune		Venus
+Libra		Venus	Saturn		Mars		Pluto
+Scorpio		Pluto	Uranus		Venus		Moon
+Sagittarius	Jupiter	none		Mercury		none
+Capricorn	Saturn	Mars		Moon		Jupiter
+Aquarius	Uranus	none		Sun			Neptune
+Pisces		Neptune	Venus		Mercury		Mercury
+
+Sign			Alternative Modern allocations (index 8)
+			Ruler	Exaltation	Detriment	Fall
+Aries		Mars	Sun			Venus		Saturn
+Taurus		Venus	Moon		Pluto		Uranus
+Gemini		Mercury	none		Jupiter		none
+Cancer		Moon	Neptune		Saturn		Mars
+Leo			Sun		Jupiter		Uranus		none
+Virgo		Mercury	Mercury		Neptune		Pluto
+Libra		Venus	Saturn		Mars		Sun
+Scorpio		Pluto	Uranus		Venus		Moon
+Sagittarius	Jupiter	none		Mercury		none
+Capricorn	Saturn	Mars		Moon		Neptune
+Aquarius	Uranus	none		Sun			none
+Pisces		Neptune	Pluto		Mercury		Mercury
+
+
+precession
+Allows for precession of equinoxes. This effectively rotates the chart. Values are 0 (no precession, default) and 1. Precessed values are calculated with reference to Hipparchus (~130 BC).
+
+
+orbtype
+Selects whether aspect orbs (index 0, default) or planet orbs (index 1) are used.
+These are mutually exclusive. If aspect orbs are used the value of poindex (planet orb index, below) is ignored. If planet orbs are selected, then the aspect orbs (aoindex) are unused.
+
+
+poindex
+If planetary orbs are selected (orbtype 1) then this allows use of two sets of planetary orbs, those of Lilly (0, default) and al-Biruni (index 1). The values are, in degrees:
+
+Planet		Lilly		al-Biruni
+Sun			15		17
+Moon		12		12.5
+Mercury		7		7
+Venus		7		8
+Mars		7		8
+Jupiter		9		12
+Saturn		9		10
+Uranus		5		5
+Neptune		5		5
+Pluto		5		5
+
+Note the last three are modern allocations, used if modern traditional factors are selected (tfindex 4 or 8).
+
+
+charttype
+Selects whether natal data (index 0, default) or averaged natal data (used in cross-profiling to determine compatibility, index 1) is displayed. Note that is necessary for chart type 0 to be selected to use cross-profiling since the averaged values are determined internally. The chart type should normally be left at index 0 unless you really need to compare averaged data of two charts visually.

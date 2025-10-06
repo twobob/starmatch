@@ -1,0 +1,140 @@
+        It is useful to remember that an aspect is some subdivision of a
+        circle:
+        
+        conjunction 1 division of 360 degrees:    value 1
+        opposition 2 divisions of 360 degrees:    value 2
+        trine 3 divisions of 360 degrees:         value 3
+        square 4 divisions of 360 degrees:        value 4
+        sextile 6 divisions of 360 degrees:       value 6
+        semi-square 8 divisions of 360 degrees:   value 8
+        semi-sextile 12 divisions of 360 degrees: value 12
+        
+        Using a different form for the numerical  values  obtained,  the
+        table  can  be restated:  the values of the above aspects can be
+        represented as a factor (which is an integer)  multiplied  by  a
+        highest  prime  divisor.  For example, the highest prime divisor
+        of 1 is 1, of 2, 2, of 3, 3, of 4, 2, of 6, 3, of 8, 2,  of  12,
+        3....
+        
+        By  taking  the square root of the multiplying factor associated
+        with each highest prime divisor we obtain a table of aspect val-
+        ues with interesting properties:
+        
+        ASPECT      DIVISION  FACTOR  HIGHEST  EXPRESSION        1/VAL.
+                    OF CIRCLE         PRIME    VALUE
+                                      DIVISOR
+        
+        conjunction  1        1       1        1*sqrt(1) = 1     1
+        opposition   2        1       2        2*sqrt(1) = 2     0.5
+        trine        3        1       3        3*sqrt(1) = 3     0.33
+        square       4        2       2        2*sqrt(2) = 2.83  0.35
+        sextile      6        2       3        3*sqrt(2) = 4.24  0.24
+        semi-square  8        4       2        2*sqrt(4) = 4     0.25
+        semi-sextile 12       4       3        3*sqrt(4) = 6     0.17
+        
+        It  is of  interest  to  note that  neither  the quincunx  nor
+        sesqui- quadrate aspects can  be satisfactorily represented by
+        the above scheme - and the quincunx at least has traditionally
+        been  re- garded  as a  'rogue', whose  influence is  entirely
+        variable  but   usually  unsettling  or   disturbing,  neither
+        positive   nor  negative.    However,  150   degrees  can   be
+        represented as one-twelfth of (5  x 360 degrees): the quincunx
+        is  thus  an  integer  subdivision  of  5  circles,  not  one;
+        similarly,  the sesquiquadrate  is expressible  as an  integer
+        submultiple of 24 circles. At any rate, their consideration as
+        somehow  being   different  from   the  other   aspects  seems
+        justified.  These   two  latter   aspects  are   perhaps  best
+        considered as  'harmonics' of some  kind (perhaps the  work of
+        John Addey is  of relevance here, although I  have not studied
+        it).  Their effect is traditionally considered as weak.
+
+	The quincunx  aspect is not  capable of being expressed  as an
+	integer  subdivision of  a single  circle. It  is probably  of
+	later  development than  the other  aspects, which  are easier
+	visualised.  It  can be expressed  in the format of  the table
+	above by noting that 150  degrees is an integer subdivision of
+	5 rotations, not one:
+	
+	quincunx 12 divisions of 5 x 360 degrees
+	
+	The numerical value  associated with this aspect  is still 12,
+	as for the semi-sextile, but is here effectively rescaled by a
+	factor  of  5.   Consequently   the  nominal  aspect  strength
+	calculated must be  reduced by this factor.  The highest prime
+	divisor is still 3 but now the factor is 4/5, hence
+	
+	quincunx     12/5     4/5      3       3*sqrt(4/5) = 2.68 0.37
+	
+	i.e  it has  strength  slightly greater  than  the square  but
+	considerably less than the opposition.  This intepretation is,
+	of course, arguable.
+	
+        Rearranging these into order of 1/expression value we obtain
+        
+        		1 conjunction
+        		2 opposition
+			3 quincunx
+        		4 square
+        		5 trine
+        		6 semi-square
+        		7 sextile
+        		8 semi-sextile
+        
+        and here the order of the aspects in terms of their strengths is
+        exactly as given by the ancients (excepting the later quincunx),
+	where the  negative  aspects are taken to  be stronger than  the
+	corresponding positive ones (it is easier to notice what's wrong
+	with something than what's  right: negative indicators appear to
+	be more specific pointers).
+        
+        The  above  system of allocating numerical values to the aspects
+        is the one used by the author and employed in  conjunction  with
+        the point-scoring system of chart numerical analysis.
+       
+        In  order  to use the above table of aspect strengths, since nu-
+        merically the aspect values increase going down the list (as the
+        aspects become traditionally weaker), the reciprocals of the as-
+        pect strengths are used as multiplying factors.
+        
+        For practical use inexact aspects are the norm; aspect  strength
+        is therefore taken to be related to both the strength of the as-
+        pect (as in the above list) and the amount by which the particu-
+        lar aspect differs from its maximum allowable orb, expressed as
+        
+        chart aspect strength = ((1 / full aspect strength)
+			      x (1 - (error in aspect / orb of aspect)))
+        
+        for example:  if Venus opposition Jupiter in a chart  has  value
+        175 degrees, then the error in this aspect is taken as the abso-
+        lute value of the difference between this value and that  repre-
+        senting  the  exact  aspect, i.e. | 175 - 180 | = 5 degrees.  If
+        the orb allowed for the  opposition  is  9  degrees,  since  the
+        strength of the opposition is 1/2, the above expression becomes
+        
+        opposition strength = ((1/2) x (1 - (5 / 9))) = (0.5) x (0.44) =
+        0.22
+        
+        which value is substituted wherever that  particular  opposition
+        occurs in determination of the strength of some particular theme
+        in a numeric chart.  Where planets such as the Sun or  Moon  are
+        allocated  a value of 2 in the numeric chart, this is applied as
+        a further multiplying factor to the aspect  strength  calculated
+        above.  Thus, the Sun opposition Jupiter might have a value of 2
+        x 0.22 = 0.44, reflecting the greater importance of the  Sun  as
+        compared to Venus.  This is the  only concession  made to numer-
+        ically representing individual planet strengths in the method of
+        numerical astrology, and one which perhaps should be more deeply
+        studied [see Ptolemy's discussion of exaltation and  fall].   Is
+        it  sensible  to  allocate  the  same value - unity - to all the
+        planets (other than the Sun and Moon) - or should these be vari-
+        able;  and  in this case, should not gravity play a part - which
+        itself poses the question:  is the mass an important factor  (in
+        which  case the effect of the planets would be vanishingly small
+        compared to that of the Sun) - or is it simply that a planet  is
+        representative  of  a  particular region of personality or being
+        (in which case the allocation of the same value to  all  planets
+        would  be  acceptable).   This is fundamentally a question as to
+        whether it is the orientation in the continuum of the  point  of
+        origination  which  is  of  prime importance, the planets merely
+        serving as markers to some region or qualifying it in  some  re-
+        spect.

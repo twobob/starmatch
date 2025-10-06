@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Starmatch - Accurate Astrological Engine</title>
+  <link rel="stylesheet" href="style/engine-visualiser.css">
+  <link rel="stylesheet" href="style/location-picker.css">
+</head>
+<body>
+  <main>
+    <header>
+  <h1>Starmatch - Accurate Astrological Engine</h1>
+
+      <!-- Mode Toggle -->
+      <div class="mode-toggle">
+        <button id="btn-chart-mode" class="mode-btn active">Chart Mode</button>
+        <button id="btn-starmatch-mode" class="mode-btn">Starmatch Mode</button>
+      </div>
+    </header>
+
+    <section class="input-controls">
+      <div class="control-group">
+        <h3>Birth Data Input</h3>
+        <div class="input-row">
+          <div class="input-field">
+            <label for="birth-date">Date</label>
+            <input type="date" id="birth-date" value="1974-09-11">
+            <small id="date-range-hint" style="font-size: 0.7rem; color: #8fa8ce; margin-top: 0.25rem; display: none;"></small>
+          </div>
+          <div class="input-field">
+            <label for="birth-time">Time (UTC)</label>
+            <input type="time" id="birth-time" value="14:14">
+          </div>
+        </div>
+
+        <div class="input-row with-lookup">
+          <div class="input-field">
+            <label for="latitude">Lat</label>
+            <input type="number" id="latitude" min="-90" max="90" step="0.01" value="55.9221" placeholder="55.9221">
+          </div>
+          <div class="input-field">
+            <label for="longitude">Long</label>
+            <input type="number" id="longitude" min="-180" max="180" step="0.01" value="-3.1336" placeholder="-3.1336">
+          </div>
+          <div class="input-field">
+            <label>&nbsp;</label>
+            <button class="location-lookup-btn" id="location-lookup" title="Search for location">
+              🔍
+            </button>
+          </div>
+        </div>
+        <div id="selected-location-name" style="font-size: 0.85rem; color: #8fa8ce; margin-top: 0.5rem; min-height: 1.2em;"></div>
+        
+        <div class="action-row">
+          <button id="btn-load-records" class="mini-btn" title="Load Saved Records">Load</button>
+          <button id="btn-save-record" class="mini-btn" title="Save Current Inputs">Save</button>
+          <button id="btn-calculate" class="primary-btn">Calculate Chart</button>
+        </div>
+        <div id="records-panel" class="records-panel hidden">
+          <div class="records-header">
+            <span>Saved Records</span>
+            <button id="btn-close-records" class="icon-btn" title="Close">✕</button>
+          </div>
+          <div id="records-list" class="records-list empty">
+            <div class="empty-msg">No saved records yet.</div>
+          </div>
+          <div class="records-footer">
+            <label class="apply-settings-toggle" title="If checked, loading a record will overwrite current engine settings">
+              <input type="checkbox" id="apply-saved-settings" checked>
+              <span>Apply saved settings</span>
+            </label>
+            <button id="btn-clear-all" class="danger-btn" title="Delete All Records">Clear All</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h3>Engine Settings</h3>
+        <div class="setting-row">
+          <label for="orb-type">Orb Type</label>
+          <select id="orb-type">
+            <option value="0" selected>Aspect Orbs (Modern)</option>
+            <option value="1">Planet Orbs (Ancient)</option>
+          </select>
+        </div>
+        
+        <div class="setting-row">
+          <label for="aspect-orb-set">Aspect Orb Set</label>
+          <select id="aspect-orb-set">
+            <option value="0" selected>Default</option>
+            <option value="1">Tight</option>
+            <option value="2">Wide (Astrotheme)</option>
+            <option value="3">Medium</option>
+            <option value="4">Very Tight</option>
+          </select>
+        </div>
+        
+        <div class="setting-row">
+          <label for="rulership-set">Rulership System</label>
+          <select id="rulership-set">
+            <option value="0" selected>Ancient Rulers</option>
+            <option value="4">Modern Rulers</option>
+          </select>
+        </div>
+        
+        <div class="setting-row">
+          <label>
+            <input type="checkbox" id="precession-flag">
+            Apply Precession Correction
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="chart-visualisation">
+      <h3>Chart Wheel Visualization</h3>
+      <div class="canvas-container">
+        <canvas id="chart-canvas" width="600" height="600"></canvas>
+        <div id="chart-tooltip" class="chart-tooltip"></div>
+      </div>
+    </section>
+
+    <section class="results-container">
+      <div class="planetary-positions">
+        <h3>Planetary Positions</h3>
+        <div id="positions-display" class="positions-grid">
+          <div class="loading-message">Calculate a chart to view positions...</div>
+        </div>
+      </div>
+
+      <div class="theme-chart">
+        <h3>Theme Values (House/Sign Emphasis)</h3>
+        <div id="theme-bars" class="theme-bars-container">
+          <div class="loading-message">Calculate a chart to view themes...</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="analysis-details">
+      <div class="analysis-header">
+        <h3>Dominant Themes / Traditional Factors / Aspect Analysis</h3>
+        <button class="collapse-toggle" id="analysis-toggle" aria-label="Toggle analysis details">
+          <span class="collapse-icon">▼</span>
+        </button>
+      </div>
+      <div class="analysis-content" id="analysis-content">
+        <div class="detail-panel">
+          <h3>Aspect Analysis</h3>
+          <div id="aspect-counts" class="info-grid">
+            <div class="loading-message">Calculate a chart to view aspects...</div>
+          </div>
+        </div>
+
+        <div class="detail-panel">
+          <h3>Traditional Factors</h3>
+          <div id="trad-factors" class="info-grid">
+            <div class="loading-message">Calculate a chart to view factors...</div>
+          </div>
+        </div>
+
+        <div class="detail-panel">
+          <h3>Dominant Themes</h3>
+          <div id="dominant-info" class="info-grid">
+            <div class="loading-message">Calculate a chart to view dominants...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Starmatch Comparison Section (Hidden by default) -->
+    <section id="starmatch-section" class="starmatch-section hidden">
+      <div class="starmatch-container">
+        <h3>Starmatch Comparison</h3>
+        <p class="starmatch-description">
+          Compare two charts to analyze compatibility and thematic interactions.
+        </p>
+        
+        <div class="comparison-controls">
+          <div class="subject-target-row">
+            <div class="comparison-panel">
+              <h4>Subject</h4>
+              <select id="subject-select" class="record-select">
+                <option value="">-- Select Subject --</option>
+              </select>
+              <button id="btn-load-subject" class="mini-btn">Load Subject</button>
+              <div id="subject-info" class="person-info"></div>
+            </div>
+            
+            <div class="vs-divider">VS</div>
+            
+            <div class="comparison-panel">
+              <h4>Target</h4>
+              <select id="target-select" class="record-select">
+                <option value="">-- Select Target --</option>
+              </select>
+              <button id="btn-load-target" class="mini-btn">Load Target</button>
+              <div id="target-info" class="person-info"></div>
+            </div>
+          </div>
+          
+          <button id="btn-compare" class="primary-btn" disabled>Compare Charts</button>
+        </div>
+        
+        <div id="comparison-results" class="comparison-results hidden">
+          <h3>Comparison Results</h3>
+          <div id="comparison-output" class="comparison-output">
+            <!-- Results will be displayed here -->
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <div id="save-modal" class="modal hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h4>Save Record</h4>
+        <button id="modal-close" class="icon-btn" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label for="record-name-input">Name</label>
+        <input id="record-name-input" type="text" placeholder="e.g. Ada Lovelace" />
+        <div class="hint">Will store date, time, latitude, longitude, settings.</div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-save" class="primary-btn small">Save</button>
+        <button id="modal-cancel" class="mini-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div id="danger-modal" class="modal hidden">
+    <div class="modal-dialog danger">
+      <div class="modal-header">
+        <h4 id="danger-modal-title">Delete ALL Records?</h4>
+        <button id="danger-modal-close" class="icon-btn" title="Close">✕</button>
+      </div>
+      <div class="modal-body" id="danger-modal-body">
+        <p class="danger-text" id="danger-modal-text">This will permanently remove every saved record.</p>
+        <ul class="danger-list" id="danger-modal-points">
+          <li>No undo</li>
+          <li>All names and settings lost</li>
+          <li>Export first if unsure</li>
+        </ul>
+        <div class="stage-indicator" id="danger-stage-indicator">Stage 1 / 2</div>
+      </div>
+      <div class="modal-footer">
+        <button id="danger-cancel" class="mini-btn">Cancel</button>
+        <button id="danger-confirm" class="danger-btn large">Yes, Continue</button>
+      </div>
+    </div>
+  </div>
+  <!-- Include dependencies -->
+  <script src="script/engine.js"></script>
+  <script src="script/location-picker.js"></script>
+  <script src="script/starmatch-visualiser.js"></script>
+</body>
+</html>
