@@ -92,14 +92,37 @@ const ASPECT_NAMES = ['Conjunction', 'Opposition', 'Trine', 'Square', 'Sextile',
 const ELEMENT_NAMES = ['Fire', 'Earth', 'Air', 'Water'];
 const QUALITY_NAMES = ['Cardinal', 'Fixed', 'Mutable'];
 
+// Ruling planets for each sign (based on traditional and modern rulerships)
+const RULING_PLANETS = {
+  'Aries': 'Mars',
+  'Taurus': 'Venus',
+  'Gemini': 'Mercury',
+  'Cancer': 'Moon',
+  'Leo': 'Sun',
+  'Virgo': 'Mercury',
+  'Libra': 'Venus',
+  'Scorpio': 'Pluto',
+  'Sagittarius': 'Jupiter',
+  'Capricorn': 'Saturn',
+  'Aquarius': 'Uranus',
+  'Pisces': 'Neptune'
+};
+
+// Element colours: Fire (red/orange), Earth (green), Air (cyan/blue), Water (purple/blue)
+const ELEMENT_COLOURS = {
+  Fire: '#ff6b6b',    // Red - energetic, warm
+  Earth: '#51cf66',   // Green - grounded, stable
+  Air: '#74c0fc',     // Cyan - intellectual, light
+  Water: '#a78bfa'    // Purple - emotional, deep
+};
+
 // Helper function to calculate zodiac sign index from ecliptic longitude
-// The chart is rotated backwards by one sign from the traditional zodiac positions
 function getSignIndexFromLongitude(longitude) {
-  let normalizedLon = longitude % 360;
-  if (normalizedLon < 0) normalizedLon += 360;
+  let normalisedLon = longitude % 360;
+  if (normalisedLon < 0) normalisedLon += 360;
   
   // Base sign from longitude (0-29.99° = Aries, 30-59.99° = Taurus, etc.)
-  let baseSign = Math.floor(normalizedLon / 30);
+  let baseSign = Math.floor(normalisedLon / 30);
   
   // Shift backward by one sign for chart display
   let signIndex = (baseSign - 1 + 12) % 12;
@@ -109,11 +132,11 @@ function getSignIndexFromLongitude(longitude) {
 
 // Helper function to get sign name and degree from longitude
 function getSignInfo(longitude) {
-  let normalizedLon = longitude % 360;
-  if (normalizedLon < 0) normalizedLon += 360;
+  let normalisedLon = longitude % 360;
+  if (normalisedLon < 0) normalisedLon += 360;
   
   const signIndex = getSignIndexFromLongitude(longitude);
-  const degree = normalizedLon % 30;
+  const degree = normalisedLon % 30;
   const signName = SIGN_NAMES[signIndex];
   
   return { signIndex, signName, degree };
@@ -196,8 +219,6 @@ function toUTC(dateStr, timeStr, latitude, longitude) {
   if (typeof window.TimezoneHelper !== 'undefined') {
     const result = window.TimezoneHelper.localToUTC(dateStr, timeStr, latitude, longitude);
     if (result) {
-      console.log(`📍 Timezone: ${result.tzInfo.region} (${result.tzInfo.isDST ? 'DST active' : 'Standard time'})`);
-      console.log(`⏰ Offset: UTC${result.tzInfo.totalOffset >= 0 ? '+' : ''}${result.tzInfo.totalOffset}`);
       return result.utcDate;
     }
   }
@@ -275,12 +296,16 @@ function calculateAscendant(date, latitude, longitude) {
   while (asc >= 360) asc -= 360;
   
   // Apply 209.917° correction to align with tropical zodiac reference frame
-  // This precise value accounts for coordinate system orientation and minimizes deviation
+  // This precise value accounts for coordinate system orientation and minimises deviation
   asc = (asc + 209.917) % 360;
   
   return asc;
 }
 
+// Calculate Midheaven (Medium Coeli / MC) - the ecliptic degree at the upper meridian
+// The MC is the point where the ecliptic crosses the meridian, representing the 10th house cusp
+// Formula: MC = Local Sidereal Time (LST) converted to ecliptic longitude
+// Reference: https://en.wikipedia.org/wiki/Midheaven
 function calculateMidheaven(date, longitude) {
   const jd = (date.getTime() / 86400000) + 2440587.5;
   const T = (jd - 2451545.0) / 36525.0;
@@ -434,8 +459,8 @@ function displayPositions(positions, ascendant, midheaven) {
       continue;
     }
 
-    let normalizedLon = longitude % 360;
-    if (normalizedLon < 0) normalizedLon += 360;
+    let normalisedLon = longitude % 360;
+    if (normalisedLon < 0) normalisedLon += 360;
 
     const { signIndex, signName, degree } = getSignInfo(longitude);
 
@@ -571,7 +596,7 @@ function displayDominants() {
 }
 
 // ============================================================================
-// Chart Wheel Visualization (Simplified - reuses existing drawing functions)
+// Chart Wheel Visualisation 
 // ============================================================================
 
 function drawChartWheel(positions, ascendant, midheaven) {
@@ -598,11 +623,11 @@ function drawChartWheel(positions, ascendant, midheaven) {
 }
 
 function drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant) {
-  const signColors = [
-    '#ff6b6b', '#51cf66', '#ffd43b', '#74c0fc',
-    '#ff8787', '#69db7c', '#ffd43b', '#ff6b6b',
-    '#cc5de8', '#51cf66', '#74c0fc', '#a78bfa'
-  ];
+  // Derive colours from elements: Fire, Earth, Air, Water pattern
+  const getSignColour = (signIndex) => {
+    const element = ELEMENT_NAMES[signIndex % 4];
+    return ELEMENT_COLOURS[element];
+  };
 
   const offset = 180 - ascendant;
   for (let i = 0; i < 12; i++) {
@@ -618,9 +643,10 @@ function drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant) 
     ctx.moveTo(centerX, centerY);
     ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
     ctx.closePath();
-    ctx.fillStyle = signColors[signIndex] + '20';
+    const signColour = getSignColour(signIndex);
+    ctx.fillStyle = signColour + '20';
     ctx.fill();
-    ctx.strokeStyle = signColors[signIndex] + '80';
+    ctx.strokeStyle = signColour + '80';
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -634,7 +660,7 @@ function drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant) 
     ctx.save();
     ctx.translate(textX, textY);
     ctx.rotate(labelAngle + Math.PI / 2);
-    ctx.fillStyle = signColors[signIndex];
+    ctx.fillStyle = getSignColour(signIndex);
     ctx.font = 'bold 14px "Segoe UI"';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -675,10 +701,13 @@ function drawHouseCusps(centerX, centerY, radius, ascendant) {
 
 function drawPlanets(centerX, centerY, radius, positions, ascendant) {
   const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
-  const planetColors = [
-    '#ffd700', '#c0c0c0', '#ffa500', '#ff69b4', '#ff0000',
-    '#9370db', '#8b4513', '#00ced1', '#4169e1', '#8b0000'
-  ];
+  
+  // Helper function to get planet colour based on its sign's element
+  const getPlanetColour = (longitude) => {
+    const signIndex = getSignIndexFromLongitude(longitude);
+    const element = ELEMENT_NAMES[signIndex % 4];
+    return ELEMENT_COLOURS[element];
+  };
 
   Object.entries(positions).forEach(([name, longitude]) => {
     if (longitude === undefined || longitude === null || isNaN(longitude)) return;
@@ -690,13 +719,19 @@ function drawPlanets(centerX, centerY, radius, positions, ascendant) {
 
     const planetIndex = PLANET_NAMES.indexOf(name);
     if (planetIndex === -1) return;
+    
+    const planetColour = getPlanetColour(longitude);
+    const signIndex = getSignIndexFromLongitude(longitude);
+    const signName = SIGN_NAMES[signIndex];
+    const isRuling = RULING_PLANETS[signName] === name;
 
     ctx.beginPath();
     ctx.arc(x, y, 12, 0, Math.PI * 2);
-    ctx.fillStyle = planetColors[planetIndex];
+    ctx.fillStyle = planetColour;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.lineWidth = 2;
+    // Thicker, golden outline for ruling planets
+    ctx.strokeStyle = isRuling ? '#ffd700' : 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = isRuling ? 4 : 2;
     ctx.stroke();
 
     ctx.fillStyle = '#000';
@@ -708,17 +743,15 @@ function drawPlanets(centerX, centerY, radius, positions, ascendant) {
 }
 
 function drawAspects(centerX, centerY, radius, positions, ascendant) {
-  const aspectColors = {
-    0: 'rgba(255, 215, 0, 0.6)',
-    180: 'rgba(255, 69, 0, 0.6)',
-    120: 'rgba(0, 255, 127, 0.6)',
-    90: 'rgba(255, 0, 0, 0.6)',
-    60: 'rgba(135, 206, 250, 0.6)',
-    45: 'rgba(255, 165, 0, 0.5)',
-    30: 'rgba(173, 216, 230, 0.5)'
-  };
-
   const aspectAngles = [0, 180, 120, 90, 60, 45, 30];
+  
+  // Helper function to get planet colour based on its sign's element
+  const getPlanetColour = (longitude) => {
+    const signIndex = getSignIndexFromLongitude(longitude);
+    const element = ELEMENT_NAMES[signIndex % 4];
+    return ELEMENT_COLOURS[element];
+  };
+  
   const planetLongitudes = Object.entries(positions).map(([name, lon]) => ({
     name,
     longitude: lon,
@@ -747,10 +780,17 @@ function drawAspects(centerX, centerY, radius, positions, ascendant) {
           const x2 = centerX + Math.cos(angle2) * radius;
           const y2 = centerY + Math.sin(angle2) * radius;
 
+          // Create gradient from planet1 colour to planet2 colour
+          const p1Colour = getPlanetColour(p1.longitude);
+          const p2Colour = getPlanetColour(p2.longitude);
+          const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+          gradient.addColorStop(0, p1Colour + 'aa'); // Add alpha for transparency
+          gradient.addColorStop(1, p2Colour + 'aa');
+
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
-          ctx.strokeStyle = aspectColors[aspectAngle] || 'rgba(255, 255, 255, 0.3)';
+          ctx.strokeStyle = gradient;
           ctx.lineWidth = 1.5;
           ctx.stroke();
 
@@ -1035,6 +1075,7 @@ function checkPlanetHover(mouseX, mouseY) {
       const element = ELEMENT_NAMES[signIndex % 4];
       const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
       const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
+      const isRuling = RULING_PLANETS[signName] === name;
       
       return {
         type: 'planet',
@@ -1044,7 +1085,8 @@ function checkPlanetHover(mouseX, mouseY) {
         sign: signName,
         element: element,
         quality: quality,
-        polarity: polarity
+        polarity: polarity,
+        isRuling: isRuling
       };
     }
   }
@@ -1182,8 +1224,8 @@ function updateTooltip(evt) {
     
     if (hoverInfo.type === 'planet') {
       tooltipHTML = `
-        <strong>${hoverInfo.name} IN ${hoverInfo.sign}</strong><br>
-        <span style="font-size: 0.9em;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</span>
+        <strong>${hoverInfo.name} IN ${hoverInfo.sign}</strong>${hoverInfo.isRuling ? ' ★' : ''}<br>
+        <span style="font-size: 0.9em;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</span>${hoverInfo.isRuling ? '<br><span style="font-size: 0.85em; color: #ffd700;">⚡ Ruling Planet</span>' : ''}
       `;
     } else if (hoverInfo.type === 'ascendant') {
       tooltipHTML = `
@@ -1602,7 +1644,7 @@ function displayComparisonResults(subjectThemes, targetThemes, subjectPos, targe
   
   html += '</div>';
   
-  // Bottom section with chart visualization
+  // Bottom section with chart Visualisation
   html += `<div class="comparison-bottom-grid">
     <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15);">
       <div style="font-size: 0.75rem; color: #8fa8ce; line-height: 1.6;">
@@ -1660,7 +1702,14 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   // Planet symbols
   const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
   
-  // Draw subject planets (outer ring, blue)
+  // Helper function to get planet colour based on its sign's element
+  const getPlanetColour = (longitude) => {
+    const signIndex = getSignIndexFromLongitude(longitude);
+    const element = ELEMENT_NAMES[signIndex % 4];
+    return ELEMENT_COLOURS[element];
+  };
+  
+  // Draw subject planets (outer ring, element-based colours)
   Object.entries(subjectPos).forEach(([name, longitude]) => {
     const angle = (((longitude - subjectAsc + 180) % 360) * Math.PI) / 180;
     const radius = innerRadius - 20;
@@ -1670,9 +1719,11 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
     const planetIndex = PLANET_NAMES.indexOf(name);
     if (planetIndex === -1) return;
     
+    const planetColour = getPlanetColour(longitude);
+    
     compCtx.beginPath();
     compCtx.arc(x, y, 10, 0, Math.PI * 2);
-    compCtx.fillStyle = '#74c0fc';
+    compCtx.fillStyle = planetColour;
     compCtx.fill();
     compCtx.strokeStyle = '#fff';
     compCtx.lineWidth = 2;
@@ -1686,7 +1737,7 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
     compCtx.fillText(planetSymbols[planetIndex], x, y);
   });
   
-  // Draw target planets (inner ring, purple)
+  // Draw target planets (inner ring, element-based colours)
   Object.entries(targetPos).forEach(([name, longitude]) => {
     const angle = (((longitude - subjectAsc + 180) % 360) * Math.PI) / 180;
     const radius = innerRadius - 65;
@@ -1696,9 +1747,11 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
     const planetIndex = PLANET_NAMES.indexOf(name);
     if (planetIndex === -1) return;
     
+    const planetColour = getPlanetColour(longitude);
+    
     compCtx.beginPath();
     compCtx.arc(x, y, 10, 0, Math.PI * 2);
-    compCtx.fillStyle = '#b85eff';
+    compCtx.fillStyle = planetColour;
     compCtx.fill();
     compCtx.strokeStyle = '#fff';
     compCtx.lineWidth = 2;
@@ -1745,11 +1798,11 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
 
 // Helper function to draw zodiac wheel on a specific canvas
 function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius, ascendant) {
-  const signColors = [
-    '#ff6b6b', '#51cf66', '#ffd43b', '#74c0fc',
-    '#ff8787', '#69db7c', '#ffd43b', '#ff6b6b',
-    '#cc5de8', '#51cf66', '#74c0fc', '#a78bfa'
-  ];
+  // Derive colours from elements: Fire, Earth, Air, Water pattern
+  const getSignColour = (signIndex) => {
+    const element = ELEMENT_NAMES[signIndex % 4];
+    return ELEMENT_COLOURS[element];
+  };
 
   const offset = 180 - ascendant;
   // Draw each 30-degree zodiac sign segment
@@ -1766,9 +1819,10 @@ function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius
     ctx.moveTo(centerX, centerY);
     ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
     ctx.closePath();
-    ctx.fillStyle = signColors[signIndex] + '20';
+    const signColour = getSignColour(signIndex);
+    ctx.fillStyle = signColour + '20';
     ctx.fill();
-    ctx.strokeStyle = signColors[signIndex] + '80';
+    ctx.strokeStyle = signColour + '80';
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -1781,7 +1835,7 @@ function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius
     ctx.save();
     ctx.translate(textX, textY);
     ctx.rotate(midAngle + Math.PI / 2);
-    ctx.fillStyle = signColors[signIndex];
+    ctx.fillStyle = getSignColour(signIndex);
     ctx.font = 'bold 11px "Segoe UI"';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1854,13 +1908,22 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
       
       if (distance <= planetRadius) {
         const { signName, degree } = getSignInfo(longitude);
+        const signIndex = getSignIndexFromLongitude(longitude);
+        const element = ELEMENT_NAMES[signIndex % 4];
+        const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
+        const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
+        const isRuling = RULING_PLANETS[signName] === name;
         
         return {
           type: 'subject-planet',
           name: name,
           position: `${degree.toFixed(2)}°`,
           sign: signName,
-          person: currentSubject.name
+          person: currentSubject.name,
+          element: element,
+          quality: quality,
+          polarity: polarity,
+          isRuling: isRuling
         };
       }
     }
@@ -1877,13 +1940,22 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
       
       if (distance <= planetRadius) {
         const { signName, degree } = getSignInfo(longitude);
+        const signIndex = getSignIndexFromLongitude(longitude);
+        const element = ELEMENT_NAMES[signIndex % 4];
+        const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
+        const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
+        const isRuling = RULING_PLANETS[signName] === name;
         
         return {
           type: 'target-planet',
           name: name,
           position: `${degree.toFixed(2)}°`,
           sign: signName,
-          person: currentTarget.name
+          person: currentTarget.name,
+          element: element,
+          quality: quality,
+          polarity: polarity,
+          isRuling: isRuling
         };
       }
     }
@@ -1939,11 +2011,13 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
       
       if (hoverInfo.type === 'subject-planet') {
         tooltipHTML = `
-          <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign} (${hoverInfo.person})</div>
+          <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign}${hoverInfo.isRuling ? ' ★' : ''} (${hoverInfo.person})</div>
+          <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>${hoverInfo.isRuling ? '<div style="font-size: 0.8rem; color: #ffd700; margin-top: 0.25rem;">⚡ Ruling Planet</div>' : ''}
         `;
       } else if (hoverInfo.type === 'target-planet') {
         tooltipHTML = `
-          <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign} (${hoverInfo.person})</div>
+          <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign}${hoverInfo.isRuling ? ' ★' : ''} (${hoverInfo.person})</div>
+          <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>${hoverInfo.isRuling ? '<div style="font-size: 0.8rem; color: #ffd700; margin-top: 0.25rem;">⚡ Ruling Planet</div>' : ''}
         `;
       } else if (hoverInfo.type === 'sign') {
         tooltipHTML = `
