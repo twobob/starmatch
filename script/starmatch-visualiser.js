@@ -618,8 +618,8 @@ function drawChartWheel(positions, ascendant, midheaven) {
 
   drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant);
   drawHouseCusps(centerX, centerY, innerRadius, ascendant);
-  drawPlanets(centerX, centerY, innerRadius - 60, positions, ascendant);
-  drawAspects(centerX, centerY, innerRadius - 60, positions, ascendant);
+  const planetsArray = drawPlanets(centerX, centerY, innerRadius - 60, positions, ascendant);
+  drawAspects(centerX, centerY, innerRadius - 60, positions, ascendant, planetsArray);
 }
 
 function drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant) {
@@ -699,6 +699,77 @@ function drawHouseCusps(centerX, centerY, radius, ascendant) {
   ctx.fillText('ASC', labelX, labelY);
 }
 
+// Collision detection and stacking helper function
+function calculatePlanetPositionsWithCollisionDetection(positions, ascendant, centerX, centerY, baseRadius, collisionThreshold = 25, stackOffset = 15) {
+  const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
+  const planetsArray = [];
+  
+  // First pass: calculate initial positions
+  Object.entries(positions).forEach(([name, longitude]) => {
+    if (longitude === undefined || longitude === null || isNaN(longitude)) return;
+    
+    const angle = (((longitude - ascendant + 180) % 360) * Math.PI) / 180;
+    const planetIndex = PLANET_NAMES.indexOf(name);
+    if (planetIndex === -1) return;
+    
+    planetsArray.push({
+      name,
+      longitude,
+      angle,
+      planetIndex,
+      baseRadius,
+      adjustedRadius: baseRadius,
+      x: 0,
+      y: 0
+    });
+  });
+  
+  // Sort by longitude to process in order
+  planetsArray.sort((a, b) => a.longitude - b.longitude);
+  
+  // Group planets that are close together (within collision threshold in angular distance)
+  const groups = [];
+  let currentGroup = [planetsArray[0]];
+  
+  for (let i = 1; i < planetsArray.length; i++) {
+    const prevPlanet = planetsArray[i - 1];
+    const currPlanet = planetsArray[i];
+    
+    // Calculate angular difference
+    let angularDiff = Math.abs(currPlanet.longitude - prevPlanet.longitude);
+    if (angularDiff > 180) angularDiff = 360 - angularDiff;
+    
+    // If planets are close together (within ~8 degrees), they're in the same group
+    if (angularDiff < 8) {
+      currentGroup.push(currPlanet);
+    } else {
+      groups.push(currentGroup);
+      currentGroup = [currPlanet];
+    }
+  }
+  groups.push(currentGroup);
+  
+  // Now assign stack levels to each group
+  for (const group of groups) {
+    if (group.length === 1) {
+      // Single planet - no stacking needed
+      const planet = group[0];
+      planet.x = centerX + Math.cos(planet.angle) * planet.adjustedRadius;
+      planet.y = centerY + Math.sin(planet.angle) * planet.adjustedRadius;
+    } else {
+      // Multiple planets in conjunction - stack them from outer to inner
+      for (let i = 0; i < group.length && i < 7; i++) {
+        const planet = group[i];
+        planet.adjustedRadius = baseRadius - (i * stackOffset);
+        planet.x = centerX + Math.cos(planet.angle) * planet.adjustedRadius;
+        planet.y = centerY + Math.sin(planet.angle) * planet.adjustedRadius;
+      }
+    }
+  }
+  
+  return planetsArray;
+}
+
 function drawPlanets(centerX, centerY, radius, positions, ascendant) {
   const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
   
@@ -708,25 +779,21 @@ function drawPlanets(centerX, centerY, radius, positions, ascendant) {
     const element = ELEMENT_NAMES[signIndex % 4];
     return ELEMENT_COLOURS[element];
   };
-
-  Object.entries(positions).forEach(([name, longitude]) => {
-    if (longitude === undefined || longitude === null || isNaN(longitude)) return;
-
-  // Place planet relative to ascendant at left after rotation
-  const angle = (((longitude - ascendant + 180) % 360) * Math.PI) / 180;
-    const x = centerX + Math.cos(angle) * radius;
-    const y = centerY + Math.sin(angle) * radius;
-
-    const planetIndex = PLANET_NAMES.indexOf(name);
-    if (planetIndex === -1) return;
-    
-    const planetColour = getPlanetColour(longitude);
-    const signIndex = getSignIndexFromLongitude(longitude);
+  
+  // Calculate positions with collision detection
+  const planetsArray = calculatePlanetPositionsWithCollisionDetection(
+    positions, ascendant, centerX, centerY, radius, 25, 15
+  );
+  
+  // Draw planets at their adjusted positions
+  planetsArray.forEach((planet) => {
+    const planetColour = getPlanetColour(planet.longitude);
+    const signIndex = getSignIndexFromLongitude(planet.longitude);
     const signName = SIGN_NAMES[signIndex];
-    const isRuling = RULING_PLANETS[signName] === name;
+    const isRuling = RULING_PLANETS[signName] === planet.name;
 
     ctx.beginPath();
-    ctx.arc(x, y, 12, 0, Math.PI * 2);
+    ctx.arc(planet.x, planet.y, 12, 0, Math.PI * 2);
     ctx.fillStyle = planetColour;
     ctx.fill();
     // Thicker, golden outline for ruling planets
@@ -738,27 +805,34 @@ function drawPlanets(centerX, centerY, radius, positions, ascendant) {
     ctx.font = 'bold 16px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(planetSymbols[planetIndex], x, y);
+    ctx.fillText(planetSymbols[planet.planetIndex], planet.x, planet.y);
   });
+  
+  // Return the planets array for use by drawAspects
+  return planetsArray;
 }
 
-function drawAspects(centerX, centerY, radius, positions, ascendant) {
+// ============================================================================
+// Shared Chart Drawing Utilities
+// ============================================================================
+
+// Helper function to get planet colour based on its sign's element
+function getPlanetColourByLongitude(longitude) {
+  const signIndex = getSignIndexFromLongitude(longitude);
+  const element = ELEMENT_NAMES[signIndex % 4];
+  return ELEMENT_COLOURS[element];
+}
+
+// Calculate aspects between planets and return aspect data
+function calculateAspects(positions, planetsArray, ascendant, centerX, centerY, radius) {
   const aspectAngles = [0, 180, 120, 90, 60, 45, 30];
-  
-  // Helper function to get planet colour based on its sign's element
-  const getPlanetColour = (longitude) => {
-    const signIndex = getSignIndexFromLongitude(longitude);
-    const element = ELEMENT_NAMES[signIndex % 4];
-    return ELEMENT_COLOURS[element];
-  };
+  const aspects = [];
   
   const planetLongitudes = Object.entries(positions).map(([name, lon]) => ({
     name,
     longitude: lon,
     index: PLANET_NAMES.indexOf(name)
   })).filter(p => p.index !== -1);
-
-  chartData.aspects = [];
 
   for (let i = 0; i < planetLongitudes.length; i++) {
     for (let j = i + 1; j < planetLongitudes.length; j++) {
@@ -771,28 +845,29 @@ function drawAspects(centerX, centerY, radius, positions, ascendant) {
       for (const aspectAngle of aspectAngles) {
         const orb = orbType === 0 ? ao[aoIndex][aspectAngles.indexOf(aspectAngle)] : 8;
         if (Math.abs(diff - aspectAngle) <= orb) {
-          // Place aspect lines relative to ascendant at left after rotation
-          const angle1 = (((p1.longitude - ascendant + 180) % 360) * Math.PI) / 180;
-          const angle2 = (((p2.longitude - ascendant + 180) % 360) * Math.PI) / 180;
+          // Find the adjusted positions from planetsArray
+          const planet1Data = planetsArray.find(p => p.name === p1.name);
+          const planet2Data = planetsArray.find(p => p.name === p2.name);
           
-          const x1 = centerX + Math.cos(angle1) * radius;
-          const y1 = centerY + Math.sin(angle1) * radius;
-          const x2 = centerX + Math.cos(angle2) * radius;
-          const y2 = centerY + Math.sin(angle2) * radius;
-
-          // Create gradient from planet1 colour to planet2 colour
-          const p1Colour = getPlanetColour(p1.longitude);
-          const p2Colour = getPlanetColour(p2.longitude);
-          const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-          gradient.addColorStop(0, p1Colour + 'aa'); // Add alpha for transparency
-          gradient.addColorStop(1, p2Colour + 'aa');
-
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.strokeStyle = gradient;
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
+          // Use adjusted positions if available, otherwise fall back to calculated positions
+          let x1, y1, x2, y2;
+          if (planet1Data) {
+            x1 = planet1Data.x;
+            y1 = planet1Data.y;
+          } else {
+            const angle1 = (((p1.longitude - ascendant + 180) % 360) * Math.PI) / 180;
+            x1 = centerX + Math.cos(angle1) * radius;
+            y1 = centerY + Math.sin(angle1) * radius;
+          }
+          
+          if (planet2Data) {
+            x2 = planet2Data.x;
+            y2 = planet2Data.y;
+          } else {
+            const angle2 = (((p2.longitude - ascendant + 180) % 360) * Math.PI) / 180;
+            x2 = centerX + Math.cos(angle2) * radius;
+            y2 = centerY + Math.sin(angle2) * radius;
+          }
 
           // Calculate actual orb (difference from exact aspect)
           const actualOrb = Math.abs(diff - aspectAngle);
@@ -806,20 +881,47 @@ function drawAspects(centerX, centerY, radius, positions, ascendant) {
             180: 'Opposition'
           };
 
-          chartData.aspects.push({
+          aspects.push({
             planet1: p1.name,
             planet2: p2.name,
             aspect: aspectAngle,
             type: aspectTypes[aspectAngle] || `${aspectAngle}°`,
             angle: aspectAngle,
             orb: actualOrb,
-            x1, y1, x2, y2
+            x1, y1, x2, y2,
+            p1Colour: getPlanetColourByLongitude(p1.longitude),
+            p2Colour: getPlanetColourByLongitude(p2.longitude)
           });
           break;
         }
       }
     }
   }
+  
+  return aspects;
+}
+
+// Draw aspects on a canvas context
+function drawAspectsOnCanvas(ctx, aspects, opacity = 1) {
+  aspects.forEach(aspect => {
+    const gradient = ctx.createLinearGradient(aspect.x1, aspect.y1, aspect.x2, aspect.y2);
+    const alpha = Math.floor(170 * opacity).toString(16).padStart(2, '0'); // aa = 170 in hex
+    gradient.addColorStop(0, aspect.p1Colour + alpha);
+    gradient.addColorStop(1, aspect.p2Colour + alpha);
+
+    ctx.beginPath();
+    ctx.moveTo(aspect.x1, aspect.y1);
+    ctx.lineTo(aspect.x2, aspect.y2);
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+}
+
+function drawAspects(centerX, centerY, radius, positions, ascendant, planetsArray) {
+  const aspects = calculateAspects(positions, planetsArray, ascendant, centerX, centerY, radius);
+  drawAspectsOnCanvas(ctx, aspects);
+  chartData.aspects = aspects;
 }
 
 // ============================================================================
@@ -1224,7 +1326,7 @@ function updateTooltip(evt) {
     
     if (hoverInfo.type === 'planet') {
       tooltipHTML = `
-        <strong>${hoverInfo.name} IN ${hoverInfo.sign}</strong>${hoverInfo.isRuling ? ' ★' : ''}<br>
+        <strong>${hoverInfo.name} IN ${hoverInfo.sign}</strong><br>
         <span style="font-size: 0.9em;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</span>${hoverInfo.isRuling ? '<br><span style="font-size: 0.85em; color: #ffd700;">⚡ Ruling Planet</span>' : ''}
       `;
     } else if (hoverInfo.type === 'ascendant') {
@@ -1702,31 +1804,39 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   // Planet symbols
   const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
   
-  // Helper function to get planet colour based on its sign's element
-  const getPlanetColour = (longitude) => {
-    const signIndex = getSignIndexFromLongitude(longitude);
-    const element = ELEMENT_NAMES[signIndex % 4];
-    return ELEMENT_COLOURS[element];
-  };
+  // Calculate positions with collision detection for subject planets
+  const subjectPlanetsArray = calculatePlanetPositionsWithCollisionDetection(
+    subjectPos, subjectAsc, centerX, centerY, innerRadius - 20, 22, 12
+  );
+  
+  // Calculate positions with collision detection for target planets
+  const targetPlanetsArray = calculatePlanetPositionsWithCollisionDetection(
+    targetPos, subjectAsc, centerX, centerY, innerRadius - 65, 22, 12
+  );
+  
+  // Calculate aspects for both charts
+  const subjectAspects = calculateAspects(subjectPos, subjectPlanetsArray, subjectAsc, centerX, centerY, innerRadius - 20);
+  const targetAspects = calculateAspects(targetPos, targetPlanetsArray, subjectAsc, centerX, centerY, innerRadius - 65);
+  
+  // Draw subject aspects (outer ring) - start dimmed
+  drawAspectsOnCanvas(compCtx, subjectAspects, 0.2);
+  
+  // Draw target aspects (inner ring) - start dimmed
+  drawAspectsOnCanvas(compCtx, targetAspects, 0.2);
   
   // Draw subject planets (outer ring, element-based colours)
-  Object.entries(subjectPos).forEach(([name, longitude]) => {
-    const angle = (((longitude - subjectAsc + 180) % 360) * Math.PI) / 180;
-    const radius = innerRadius - 20;
-    const x = centerX + Math.cos(angle) * radius;
-    const y = centerY + Math.sin(angle) * radius;
-    
-    const planetIndex = PLANET_NAMES.indexOf(name);
-    if (planetIndex === -1) return;
-    
-    const planetColour = getPlanetColour(longitude);
+  subjectPlanetsArray.forEach((planet) => {
+    const planetColour = getPlanetColourByLongitude(planet.longitude);
+    const signIndex = getSignIndexFromLongitude(planet.longitude);
+    const signName = SIGN_NAMES[signIndex];
+    const isRuling = RULING_PLANETS[signName] === planet.name;
     
     compCtx.beginPath();
-    compCtx.arc(x, y, 10, 0, Math.PI * 2);
+    compCtx.arc(planet.x, planet.y, 10, 0, Math.PI * 2);
     compCtx.fillStyle = planetColour;
     compCtx.fill();
-    compCtx.strokeStyle = '#fff';
-    compCtx.lineWidth = 2;
+    compCtx.strokeStyle = isRuling ? '#ffd700' : '#fff';
+    compCtx.lineWidth = isRuling ? 4 : 2;
     compCtx.stroke();
     
     // Draw planet symbol
@@ -1734,27 +1844,22 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
     compCtx.font = 'bold 14px Arial';
     compCtx.textAlign = 'center';
     compCtx.textBaseline = 'middle';
-    compCtx.fillText(planetSymbols[planetIndex], x, y);
+    compCtx.fillText(planetSymbols[planet.planetIndex], planet.x, planet.y);
   });
   
   // Draw target planets (inner ring, element-based colours)
-  Object.entries(targetPos).forEach(([name, longitude]) => {
-    const angle = (((longitude - subjectAsc + 180) % 360) * Math.PI) / 180;
-    const radius = innerRadius - 65;
-    const x = centerX + Math.cos(angle) * radius;
-    const y = centerY + Math.sin(angle) * radius;
-    
-    const planetIndex = PLANET_NAMES.indexOf(name);
-    if (planetIndex === -1) return;
-    
-    const planetColour = getPlanetColour(longitude);
+  targetPlanetsArray.forEach((planet) => {
+    const planetColour = getPlanetColourByLongitude(planet.longitude);
+    const signIndex = getSignIndexFromLongitude(planet.longitude);
+    const signName = SIGN_NAMES[signIndex];
+    const isRuling = RULING_PLANETS[signName] === planet.name;
     
     compCtx.beginPath();
-    compCtx.arc(x, y, 10, 0, Math.PI * 2);
+    compCtx.arc(planet.x, planet.y, 10, 0, Math.PI * 2);
     compCtx.fillStyle = planetColour;
     compCtx.fill();
-    compCtx.strokeStyle = '#fff';
-    compCtx.lineWidth = 2;
+    compCtx.strokeStyle = isRuling ? '#ffd700' : '#fff';
+    compCtx.lineWidth = isRuling ? 4 : 2;
     compCtx.stroke();
     
     // Draw planet symbol
@@ -1762,7 +1867,7 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
     compCtx.font = 'bold 14px Arial';
     compCtx.textAlign = 'center';
     compCtx.textBaseline = 'middle';
-    compCtx.fillText(planetSymbols[planetIndex], x, y);
+    compCtx.fillText(planetSymbols[planet.planetIndex], planet.x, planet.y);
   });
   
   // Draw ascendant lines
@@ -1792,8 +1897,8 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   compCtx.stroke();
   compCtx.setLineDash([]); // Reset to solid
   
-  // Setup tooltips
-  setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetAsc);
+  // Setup tooltips with interactive aspect dimming
+  setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetAsc, subjectPlanetsArray, targetPlanetsArray, subjectAspects, targetAspects);
 }
 
 // Helper function to draw zodiac wheel on a specific canvas
@@ -1856,7 +1961,7 @@ function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius
 let comparisonTooltipListeners = null;
 
 // Setup tooltips for comparison chart
-function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetAsc) {
+function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetAsc, subjectPlanetsArray, targetPlanetsArray, subjectAspects, targetAspects) {
   const compCanvas = document.getElementById('comparison-chart-canvas');
   if (!compCanvas) return;
   
@@ -1875,13 +1980,121 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     centerY: compCanvas.height / 2,
     outerRadius: 180,
     innerRadius: 140,
-    subjectPlanetRadius: 120,
-    targetPlanetRadius: 75,
     subjectPos,
     targetPos,
     subjectAsc,
-    targetAsc
+    targetAsc,
+    subjectPlanetsArray,
+    targetPlanetsArray,
+    subjectAspects,
+    targetAspects
   };
+  
+  let currentHoveredPlanet = null;
+  
+  function redrawChart(hoveredPlanet) {
+    const compCtx = compCanvas.getContext('2d');
+    const centerX = compCanvas.width / 2;
+    const centerY = compCanvas.height / 2;
+    const outerRadius = 180;
+    const innerRadius = 140;
+    const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
+    
+    compCtx.clearRect(0, 0, compCanvas.width, compCanvas.height);
+    compCtx.fillStyle = '#05070f';
+    compCtx.fillRect(0, 0, compCanvas.width, compCanvas.height);
+    
+    // Draw zodiac wheel
+    drawZodiacWheelOnCanvas(compCtx, centerX, centerY, outerRadius, innerRadius, subjectAsc);
+    
+    // Determine which aspects to lighten based on hovered planet
+    let subjectOpacity = 0.2;
+    let targetOpacity = 0.2;
+    
+    if (hoveredPlanet) {
+      if (hoveredPlanet.type === 'subject-planet' || hoveredPlanet.type === 'aspect' && hoveredPlanet.person === currentSubject.name) {
+        subjectOpacity = 1; // Show subject aspects when hovering subject planet or aspect
+        targetOpacity = 0.2; // Lighten target aspects
+      } else if (hoveredPlanet.type === 'target-planet' || hoveredPlanet.type === 'aspect' && hoveredPlanet.person === currentTarget.name) {
+        targetOpacity = 1; // Show target aspects when hovering target planet or aspect
+        subjectOpacity = 0.2; // Lighten subject aspects
+      }
+    }
+    // else: When not hovering any planet, both stay dimmed at 0.2
+    
+    // Draw aspects with appropriate opacity
+    drawAspectsOnCanvas(compCtx, subjectAspects, subjectOpacity);
+    drawAspectsOnCanvas(compCtx, targetAspects, targetOpacity);
+    
+    // Draw subject planets
+    subjectPlanetsArray.forEach((planet) => {
+      const planetColour = getPlanetColourByLongitude(planet.longitude);
+      const signIndex = getSignIndexFromLongitude(planet.longitude);
+      const signName = SIGN_NAMES[signIndex];
+      const isRuling = RULING_PLANETS[signName] === planet.name;
+      
+      compCtx.beginPath();
+      compCtx.arc(planet.x, planet.y, 10, 0, Math.PI * 2);
+      compCtx.fillStyle = planetColour;
+      compCtx.fill();
+      compCtx.strokeStyle = isRuling ? '#ffd700' : '#fff';
+      compCtx.lineWidth = isRuling ? 4 : 2;
+      compCtx.stroke();
+      
+      compCtx.fillStyle = '#000';
+      compCtx.font = 'bold 14px Arial';
+      compCtx.textAlign = 'center';
+      compCtx.textBaseline = 'middle';
+      compCtx.fillText(planetSymbols[planet.planetIndex], planet.x, planet.y);
+    });
+    
+    // Draw target planets
+    targetPlanetsArray.forEach((planet) => {
+      const planetColour = getPlanetColourByLongitude(planet.longitude);
+      const signIndex = getSignIndexFromLongitude(planet.longitude);
+      const signName = SIGN_NAMES[signIndex];
+      const isRuling = RULING_PLANETS[signName] === planet.name;
+      
+      compCtx.beginPath();
+      compCtx.arc(planet.x, planet.y, 10, 0, Math.PI * 2);
+      compCtx.fillStyle = planetColour;
+      compCtx.fill();
+      compCtx.strokeStyle = isRuling ? '#ffd700' : '#fff';
+      compCtx.lineWidth = isRuling ? 4 : 2;
+      compCtx.stroke();
+      
+      compCtx.fillStyle = '#000';
+      compCtx.font = 'bold 14px Arial';
+      compCtx.textAlign = 'center';
+      compCtx.textBaseline = 'middle';
+      compCtx.fillText(planetSymbols[planet.planetIndex], planet.x, planet.y);
+    });
+    
+    // Draw ascendant lines
+    const subjectAscAngle = ((-180) * Math.PI) / 180;
+    compCtx.beginPath();
+    compCtx.moveTo(centerX, centerY);
+    compCtx.lineTo(
+      centerX + Math.cos(subjectAscAngle) * innerRadius,
+      centerY + Math.sin(subjectAscAngle) * innerRadius
+    );
+    compCtx.strokeStyle = '#74c0fc';
+    compCtx.lineWidth = 2;
+    compCtx.stroke();
+    
+    const targetAscAngle = (((targetAsc - subjectAsc + 180) % 360) * Math.PI) / 180;
+    compCtx.beginPath();
+    compCtx.moveTo(centerX, centerY);
+    compCtx.lineTo(
+      centerX + Math.cos(targetAscAngle) * innerRadius,
+      centerY + Math.sin(targetAscAngle) * innerRadius
+    );
+    compCtx.strokeStyle = '#b85eff';
+    compCtx.lineWidth = 2;
+    compCtx.setLineDash([5, 5]);
+    compCtx.stroke();
+    compCtx.setLineDash([]);
+  }
   
   function getMousePos(canvas, evt) {
     const rect = canvas.getBoundingClientRect();
@@ -1896,67 +2109,59 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
   function checkPlanetHover(mouseX, mouseY) {
     const planetRadius = 15;
     
-    // Check subject planets (using main chart formula)
-    for (const [name, longitude] of Object.entries(compChartData.subjectPos)) {
-      if (isNaN(longitude) || !isFinite(longitude)) continue;
-      
-      const angle = (((longitude - compChartData.subjectAsc + 180) % 360) * Math.PI) / 180;
-      const x = compChartData.centerX + Math.cos(angle) * compChartData.subjectPlanetRadius;
-      const y = compChartData.centerY + Math.sin(angle) * compChartData.subjectPlanetRadius;
-      
-      const distance = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
-      
-      if (distance <= planetRadius) {
-        const { signName, degree } = getSignInfo(longitude);
-        const signIndex = getSignIndexFromLongitude(longitude);
-        const element = ELEMENT_NAMES[signIndex % 4];
-        const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
-        const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
-        const isRuling = RULING_PLANETS[signName] === name;
+    // Check subject planets with collision-adjusted positions
+    if (compChartData.subjectPlanetsArray) {
+      for (const planet of compChartData.subjectPlanetsArray) {
+        const distance = Math.sqrt((mouseX - planet.x) ** 2 + (mouseY - planet.y) ** 2);
         
-        return {
-          type: 'subject-planet',
-          name: name,
-          position: `${degree.toFixed(2)}°`,
-          sign: signName,
-          person: currentSubject.name,
-          element: element,
-          quality: quality,
-          polarity: polarity,
-          isRuling: isRuling
-        };
+        if (distance <= planetRadius) {
+          const { signName, degree } = getSignInfo(planet.longitude);
+          const signIndex = getSignIndexFromLongitude(planet.longitude);
+          const element = ELEMENT_NAMES[signIndex % 4];
+          const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
+          const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
+          const isRuling = RULING_PLANETS[signName] === planet.name;
+          
+          return {
+            type: 'subject-planet',
+            name: planet.name,
+            position: `${degree.toFixed(2)}°`,
+            sign: signName,
+            person: currentSubject.name,
+            element: element,
+            quality: quality,
+            polarity: polarity,
+            isRuling: isRuling
+          };
+        }
       }
     }
     
-    // Check target planets (using subject's ascendant as reference, main chart formula)
-    for (const [name, longitude] of Object.entries(compChartData.targetPos)) {
-      if (isNaN(longitude) || !isFinite(longitude)) continue;
-      
-      const angle = (((longitude - compChartData.subjectAsc + 180) % 360) * Math.PI) / 180;
-      const x = compChartData.centerX + Math.cos(angle) * compChartData.targetPlanetRadius;
-      const y = compChartData.centerY + Math.sin(angle) * compChartData.targetPlanetRadius;
-      
-      const distance = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
-      
-      if (distance <= planetRadius) {
-        const { signName, degree } = getSignInfo(longitude);
-        const signIndex = getSignIndexFromLongitude(longitude);
-        const element = ELEMENT_NAMES[signIndex % 4];
-        const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
-        const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
-        const isRuling = RULING_PLANETS[signName] === name;
+    // Check target planets with collision-adjusted positions
+    if (compChartData.targetPlanetsArray) {
+      for (const planet of compChartData.targetPlanetsArray) {
+        const distance = Math.sqrt((mouseX - planet.x) ** 2 + (mouseY - planet.y) ** 2);
         
-        return {
-          type: 'target-planet',
-          name: name,
-          position: `${degree.toFixed(2)}°`,
-          sign: signName,
-          person: currentTarget.name,
-          element: element,
-          quality: quality,
-          polarity: polarity,
-          isRuling: isRuling
-        };
+        if (distance <= planetRadius) {
+          const { signName, degree } = getSignInfo(planet.longitude);
+          const signIndex = getSignIndexFromLongitude(planet.longitude);
+          const element = ELEMENT_NAMES[signIndex % 4];
+          const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
+          const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
+          const isRuling = RULING_PLANETS[signName] === planet.name;
+          
+          return {
+            type: 'target-planet',
+            name: planet.name,
+            position: `${degree.toFixed(2)}°`,
+            sign: signName,
+            person: currentTarget.name,
+            element: element,
+            quality: quality,
+            polarity: polarity,
+            isRuling: isRuling
+          };
+        }
       }
     }
     
@@ -1994,16 +2199,132 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     return null;
   }
   
+  function checkAspectHover(mouseX, mouseY) {
+    // Check subject aspects first
+    for (const aspect of compChartData.subjectAspects) {
+      const distance = distanceToLineSegment(
+        mouseX, mouseY,
+        aspect.x1, aspect.y1,
+        aspect.x2, aspect.y2
+      );
+      
+      if (distance <= 5) {
+        const p1Lon = compChartData.subjectPos[aspect.planet1];
+        const p2Lon = compChartData.subjectPos[aspect.planet2];
+        
+        const p1SignIndex = getSignIndexFromLongitude(p1Lon);
+        const p2SignIndex = getSignIndexFromLongitude(p2Lon);
+        
+        const p1Sign = SIGN_NAMES[p1SignIndex];
+        const p2Sign = SIGN_NAMES[p2SignIndex];
+        
+        const p1Element = ELEMENT_NAMES[p1SignIndex % 4];
+        const p2Element = ELEMENT_NAMES[p2SignIndex % 4];
+        
+        const p1Quality = QUALITY_NAMES[Math.floor(p1SignIndex / 4)];
+        const p2Quality = QUALITY_NAMES[Math.floor(p2SignIndex / 4)];
+        
+        const p1Polarity = (p1Element === 'Fire' || p1Element === 'Air') ? '+' : '-';
+        const p2Polarity = (p2Element === 'Fire' || p2Element === 'Air') ? '+' : '-';
+        
+        return {
+          type: 'aspect',
+          person: currentSubject.name,
+          color: '#74c0fc',
+          planet1: aspect.planet1,
+          planet2: aspect.planet2,
+          aspectType: aspect.type,
+          angle: aspect.angle,
+          orb: aspect.orb,
+          p1Sign: p1Sign,
+          p2Sign: p2Sign,
+          p1Quality: p1Quality,
+          p2Quality: p2Quality,
+          p1Element: p1Element,
+          p2Element: p2Element,
+          p1Polarity: p1Polarity,
+          p2Polarity: p2Polarity
+        };
+      }
+    }
+    
+    // Check target aspects
+    for (const aspect of compChartData.targetAspects) {
+      const distance = distanceToLineSegment(
+        mouseX, mouseY,
+        aspect.x1, aspect.y1,
+        aspect.x2, aspect.y2
+      );
+      
+      if (distance <= 5) {
+        const p1Lon = compChartData.targetPos[aspect.planet1];
+        const p2Lon = compChartData.targetPos[aspect.planet2];
+        
+        const p1SignIndex = getSignIndexFromLongitude(p1Lon);
+        const p2SignIndex = getSignIndexFromLongitude(p2Lon);
+        
+        const p1Sign = SIGN_NAMES[p1SignIndex];
+        const p2Sign = SIGN_NAMES[p2SignIndex];
+        
+        const p1Element = ELEMENT_NAMES[p1SignIndex % 4];
+        const p2Element = ELEMENT_NAMES[p2SignIndex % 4];
+        
+        const p1Quality = QUALITY_NAMES[Math.floor(p1SignIndex / 4)];
+        const p2Quality = QUALITY_NAMES[Math.floor(p2SignIndex / 4)];
+        
+        const p1Polarity = (p1Element === 'Fire' || p1Element === 'Air') ? '+' : '-';
+        const p2Polarity = (p2Element === 'Fire' || p2Element === 'Air') ? '+' : '-';
+        
+        return {
+          type: 'aspect',
+          person: currentTarget.name,
+          color: '#b85eff',
+          planet1: aspect.planet1,
+          planet2: aspect.planet2,
+          aspectType: aspect.type,
+          angle: aspect.angle,
+          orb: aspect.orb,
+          p1Sign: p1Sign,
+          p2Sign: p2Sign,
+          p1Quality: p1Quality,
+          p2Quality: p2Quality,
+          p1Element: p1Element,
+          p2Element: p2Element,
+          p1Polarity: p1Polarity,
+          p2Polarity: p2Polarity
+        };
+      }
+    }
+    
+    return null;
+  }
+  
   function updateTooltip(evt) {
     const mousePos = getMousePos(compCanvas, evt);
     const mouseX = mousePos.x;
     const mouseY = mousePos.y;
     
-    // Check planets first, then signs
+    // Check planets first, then aspects, then signs
     let hoverInfo = checkPlanetHover(mouseX, mouseY);
     
     if (!hoverInfo) {
+      hoverInfo = checkAspectHover(mouseX, mouseY);
+    }
+    
+    if (!hoverInfo) {
       hoverInfo = checkSignHover(mouseX, mouseY);
+    }
+    
+    // Check if we need to redraw (planet or aspect hover changed)
+    const hoverChanged = (currentHoveredPlanet?.name !== hoverInfo?.name) || 
+                         (currentHoveredPlanet?.type !== hoverInfo?.type);
+    
+    if (hoverChanged && (hoverInfo?.type === 'subject-planet' || hoverInfo?.type === 'target-planet' || 
+                          hoverInfo?.type === 'aspect' ||
+                          currentHoveredPlanet?.type === 'subject-planet' || currentHoveredPlanet?.type === 'target-planet' ||
+                          currentHoveredPlanet?.type === 'aspect')) {
+      currentHoveredPlanet = hoverInfo;
+      redrawChart(hoverInfo);
     }
     
     if (hoverInfo) {
@@ -2011,13 +2332,29 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
       
       if (hoverInfo.type === 'subject-planet') {
         tooltipHTML = `
-          <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign}${hoverInfo.isRuling ? ' ★' : ''} (${hoverInfo.person})</div>
+          <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign} (${hoverInfo.person})</div>
           <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>${hoverInfo.isRuling ? '<div style="font-size: 0.8rem; color: #ffd700; margin-top: 0.25rem;">⚡ Ruling Planet</div>' : ''}
         `;
       } else if (hoverInfo.type === 'target-planet') {
         tooltipHTML = `
-          <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign}${hoverInfo.isRuling ? ' ★' : ''} (${hoverInfo.person})</div>
+          <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign} (${hoverInfo.person})</div>
           <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>${hoverInfo.isRuling ? '<div style="font-size: 0.8rem; color: #ffd700; margin-top: 0.25rem;">⚡ Ruling Planet</div>' : ''}
+        `;
+      } else if (hoverInfo.type === 'aspect') {
+        tooltipHTML = `
+          <div style="font-weight: 600; color: ${hoverInfo.color}; margin-bottom: 0.5rem;">${hoverInfo.aspectType} (${hoverInfo.person})</div>
+          <div style="display: flex; gap: 1rem; font-size: 0.8rem;">
+            <div>
+              <div style="color: #b8d0f0; margin-bottom: 0.25rem;">${hoverInfo.planet1} in ${hoverInfo.p1Sign}</div>
+              <div style="color: #8fa8ce; font-size: 0.75rem;">${hoverInfo.p1Quality} ${hoverInfo.p1Polarity} ${hoverInfo.p1Element}</div>
+            </div>
+            <div style="color: var(--accent); align-self: center;">↔</div>
+            <div>
+              <div style="color: #b8d0f0; margin-bottom: 0.25rem;">${hoverInfo.planet2} in ${hoverInfo.p2Sign}</div>
+              <div style="color: #8fa8ce; font-size: 0.75rem;">${hoverInfo.p2Quality} ${hoverInfo.p2Polarity} ${hoverInfo.p2Element}</div>
+            </div>
+          </div>
+          <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #6a7fa0;">Orb: ${hoverInfo.orb.toFixed(2)}°</div>
         `;
       } else if (hoverInfo.type === 'sign') {
         tooltipHTML = `
@@ -2040,6 +2377,8 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
   const mouseleaveHandler = () => {
     compTooltip.style.display = 'none';
     compCanvas.style.cursor = 'default';
+    currentHoveredPlanet = null;
+    redrawChart(null); // Restore all aspects to full opacity
   };
   
   comparisonTooltipListeners = {
