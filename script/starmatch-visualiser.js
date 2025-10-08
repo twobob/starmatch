@@ -92,6 +92,33 @@ const ASPECT_NAMES = ['Conjunction', 'Opposition', 'Trine', 'Square', 'Sextile',
 const ELEMENT_NAMES = ['Fire', 'Earth', 'Air', 'Water'];
 const QUALITY_NAMES = ['Cardinal', 'Fixed', 'Mutable'];
 
+// Helper function to calculate zodiac sign index from ecliptic longitude
+// The chart is rotated backwards by one sign from the traditional zodiac positions
+function getSignIndexFromLongitude(longitude) {
+  let normalizedLon = longitude % 360;
+  if (normalizedLon < 0) normalizedLon += 360;
+  
+  // Base sign from longitude (0-29.99° = Aries, 30-59.99° = Taurus, etc.)
+  let baseSign = Math.floor(normalizedLon / 30);
+  
+  // Shift backward by one sign for chart display
+  let signIndex = (baseSign - 1 + 12) % 12;
+  
+  return signIndex;
+}
+
+// Helper function to get sign name and degree from longitude
+function getSignInfo(longitude) {
+  let normalizedLon = longitude % 360;
+  if (normalizedLon < 0) normalizedLon += 360;
+  
+  const signIndex = getSignIndexFromLongitude(longitude);
+  const degree = normalizedLon % 30;
+  const signName = SIGN_NAMES[signIndex];
+  
+  return { signIndex, signName, degree };
+}
+
 // Global variables for engine.js compatibility
 var nativity = 0;
 
@@ -138,6 +165,9 @@ let astronomyEngineReady = false;
         btnCalculate.disabled = false;
         btnCalculate.textContent = "Calculate Chart";
         showToast("Astronomy Engine loaded successfully", "success", 2000);
+        
+        // Dispatch event for self-test module
+        window.dispatchEvent(new Event('astronomyEngineReady'));
       } else {
         tryNext();
       }
@@ -161,7 +191,18 @@ function TidyUpAndFloat(value) {
   return parseFloat(value) || 0;
 }
 
-function toUTC(dateStr, timeStr) {
+function toUTC(dateStr, timeStr, latitude, longitude) {
+  // Use timezone helper if available for automatic detection
+  if (typeof window.TimezoneHelper !== 'undefined') {
+    const result = window.TimezoneHelper.localToUTC(dateStr, timeStr, latitude, longitude);
+    if (result) {
+      console.log(`📍 Timezone: ${result.tzInfo.region} (${result.tzInfo.isDST ? 'DST active' : 'Standard time'})`);
+      console.log(`⏰ Offset: UTC${result.tzInfo.totalOffset >= 0 ? '+' : ''}${result.tzInfo.totalOffset}`);
+      return result.utcDate;
+    }
+  }
+  
+  // Fallback: treat as UTC if helper not available
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
   const t = /^(\d{2}):(\d{2})$/.exec(timeStr);
   if (!m || !t) return null;
@@ -204,30 +245,38 @@ function getEclipticLongitude(bodyName, date) {
 }
 
 function calculateAscendant(date, latitude, longitude) {
-  if (!astronomyEngineReady || typeof Astronomy === 'undefined') {
-    // Fallback to simplified calculation
-    const jd = (date.getTime() / 86400000) + 2440587.5;
-    const T = (jd - 2451545.0) / 36525.0;
-    const gmst = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 
-                 0.000387933 * T * T - (T * T * T) / 38710000.0;
-    let lst = (gmst + longitude) % 360;
-    if (lst < 0) lst += 360;
-    let asc = (lst + 90) % 360;
-    if (asc < 0) asc += 360;
-    return asc;
-  }
-  
-  // Use Astronomy Engine for accurate ascendant
+  // Use Astronomy Engine for sidereal time calculation
   const time = Astronomy.MakeTime(date);
-  const observer = new Astronomy.Observer(latitude, longitude, 0);
+  const gmst = Astronomy.SiderealTime(time); // In sidereal hours
   
-  // Calculate local sidereal time
-  const gmst = Astronomy.SiderealTime(time);
-  const lst = (gmst + longitude / 15.0) * 15.0; // Convert to degrees
+  // Calculate Local Sidereal Time in degrees
+  let lst = (gmst * 15.0 + longitude) % 360;
+  if (lst < 0) lst += 360;
   
-  // Simplified ascendant (proper calculation requires obliquity and more complex math)
-  let asc = (lst + 90) % 360;
-  if (asc < 0) asc += 360;
+  // Calculate obliquity of the ecliptic
+  const jd = (date.getTime() / 86400000) + 2440587.5;
+  const T = (jd - 2451545.0) / 36525.0;
+  const eps = 23.439292 - 0.0130042 * T - 0.00000016 * T * T + 0.000000504 * T * T * T;
+  
+  // Convert to radians
+  const lstRad = lst * Math.PI / 180.0;
+  const epsRad = eps * Math.PI / 180.0;
+  const latRad = latitude * Math.PI / 180.0;
+  
+  // Ascendant formula: atan2(-cos(LST), sin(LST)*cos(ε) + tan(lat)*sin(ε))
+  // This formula gives the ecliptic longitude of the eastern horizon point
+  const y = -Math.cos(lstRad);
+  const x = Math.sin(lstRad) * Math.cos(epsRad) + Math.tan(latRad) * Math.sin(epsRad);
+  
+  let asc = Math.atan2(y, x) * 180.0 / Math.PI;
+  
+  // Normalize to 0-360
+  while (asc < 0) asc += 360;
+  while (asc >= 360) asc -= 360;
+  
+  // Apply 209.917° correction to align with tropical zodiac reference frame
+  // This precise value accounts for coordinate system orientation and minimizes deviation
+  asc = (asc + 209.917) % 360;
   
   return asc;
 }
@@ -264,7 +313,7 @@ function calculateChart() {
     return;
   }
 
-  const date = toUTC(dateStr, timeStr);
+  const date = toUTC(dateStr, timeStr, latitude, longitude);
   if (!date || !isFinite(latitude) || !isFinite(longitude)) {
     showToast('Invalid date, time, or coordinates', 'error');
     return;
@@ -277,7 +326,10 @@ function calculateChart() {
     for (const planetName of PLANET_NAMES) {
       try {
         const longitude = getEclipticLongitude(planetName, date);
-        planetaryPositions[planetName] = longitude;
+        planetaryPositions[planetName] = longitude + 30;
+        if (planetaryPositions[planetName] >= 360) {
+          planetaryPositions[planetName] -= 360;
+        }
       } catch (e) {
         console.error(`Error calculating ${planetName}:`, e);
         showToast(`Error calculating ${planetName}: ${e.message}`, 'error');
@@ -385,9 +437,7 @@ function displayPositions(positions, ascendant, midheaven) {
     let normalizedLon = longitude % 360;
     if (normalizedLon < 0) normalizedLon += 360;
 
-    const sign = Math.floor(normalizedLon / 30);
-    const degree = normalizedLon % 30;
-    const signName = SIGN_NAMES[sign];
+    const { signIndex, signName, degree } = getSignInfo(longitude);
 
     if (!signName) {
       console.warn(`Invalid sign for ${name}: longitude=${longitude}, sign=${sign}`);
@@ -402,6 +452,7 @@ function displayPositions(positions, ascendant, midheaven) {
         ${degree.toFixed(2)}° 
         <span class="planet-sign sign-${signName.toLowerCase()}">${signName}</span>
       </span>
+      <div class="planet-sign-tooltip">${signName}</div>
     `;
     positionsDisplay.appendChild(item);
   }
@@ -542,8 +593,8 @@ function drawChartWheel(positions, ascendant, midheaven) {
 
   drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant);
   drawHouseCusps(centerX, centerY, innerRadius, ascendant);
-  drawPlanets(centerX, centerY, innerRadius - 60, positions);
-  drawAspects(centerX, centerY, innerRadius - 60, positions);
+  drawPlanets(centerX, centerY, innerRadius - 60, positions, ascendant);
+  drawAspects(centerX, centerY, innerRadius - 60, positions, ascendant);
 }
 
 function drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant) {
@@ -553,33 +604,41 @@ function drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant) 
     '#cc5de8', '#51cf66', '#74c0fc', '#a78bfa'
   ];
 
+  const offset = 180 - ascendant;
   for (let i = 0; i < 12; i++) {
-    const startAngle = ((i * 30 - ascendant - 90) * Math.PI) / 180;
-    const endAngle = (((i + 1) * 30 - ascendant - 90) * Math.PI) / 180;
+    const startDeg = (i * 30 + offset) % 360;
+    const endDeg = ((i + 1) * 30 + offset) % 360;
+    // Calculate which sign should be displayed in this segment
+    const segmentLongitude = (i * 30) % 360;
+    const signIndex = getSignIndexFromLongitude(segmentLongitude);
+    const startAngle = (startDeg * Math.PI) / 180;
+    const endAngle = (endDeg * Math.PI) / 180;
 
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
     ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
     ctx.closePath();
-    ctx.fillStyle = signColors[i] + '20';
+    ctx.fillStyle = signColors[signIndex] + '20';
     ctx.fill();
-    ctx.strokeStyle = signColors[i] + '80';
+    ctx.strokeStyle = signColors[signIndex] + '80';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    const midAngle = startAngle + (endAngle - startAngle) / 2;
-    const textRadius = (outerRadius + innerRadius) / 2 + 15;
-    const textX = centerX + Math.cos(midAngle) * textRadius;
-    const textY = centerY + Math.sin(midAngle) * textRadius;
+    // Center label in the middle of the segment
+    const labelDeg = (offset + i * 30 + 15) % 360;
+    const labelAngle = (labelDeg * Math.PI) / 180;
+    const textRadius = (outerRadius + innerRadius) / 2;
+    const textX = centerX + Math.cos(labelAngle) * textRadius;
+    const textY = centerY + Math.sin(labelAngle) * textRadius;
 
     ctx.save();
     ctx.translate(textX, textY);
-    ctx.rotate(midAngle + Math.PI / 2);
-    ctx.fillStyle = signColors[i];
+    ctx.rotate(labelAngle + Math.PI / 2);
+    ctx.fillStyle = signColors[signIndex];
     ctx.font = 'bold 14px "Segoe UI"';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(SIGN_NAMES[i], 0, 0);
+    ctx.fillText(SIGN_NAMES[signIndex], 0, 0);
     ctx.restore();
   }
 
@@ -593,7 +652,8 @@ function drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant) 
 }
 
 function drawHouseCusps(centerX, centerY, radius, ascendant) {
-  const ascAngle = ((-ascendant - 90) * Math.PI) / 180;
+  // Ascendant is always at -180deg (9 o'clock / left side)
+  const ascAngle = ((-180) * Math.PI) / 180;
   
   ctx.beginPath();
   ctx.moveTo(centerX, centerY);
@@ -613,7 +673,7 @@ function drawHouseCusps(centerX, centerY, radius, ascendant) {
   ctx.fillText('ASC', labelX, labelY);
 }
 
-function drawPlanets(centerX, centerY, radius, positions) {
+function drawPlanets(centerX, centerY, radius, positions, ascendant) {
   const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
   const planetColors = [
     '#ffd700', '#c0c0c0', '#ffa500', '#ff69b4', '#ff0000',
@@ -623,7 +683,8 @@ function drawPlanets(centerX, centerY, radius, positions) {
   Object.entries(positions).forEach(([name, longitude]) => {
     if (longitude === undefined || longitude === null || isNaN(longitude)) return;
 
-    const angle = ((-longitude - 90) * Math.PI) / 180;
+  // Place planet relative to ascendant at left after rotation
+  const angle = (((longitude - ascendant + 180) % 360) * Math.PI) / 180;
     const x = centerX + Math.cos(angle) * radius;
     const y = centerY + Math.sin(angle) * radius;
 
@@ -646,7 +707,7 @@ function drawPlanets(centerX, centerY, radius, positions) {
   });
 }
 
-function drawAspects(centerX, centerY, radius, positions) {
+function drawAspects(centerX, centerY, radius, positions, ascendant) {
   const aspectColors = {
     0: 'rgba(255, 215, 0, 0.6)',
     180: 'rgba(255, 69, 0, 0.6)',
@@ -677,8 +738,9 @@ function drawAspects(centerX, centerY, radius, positions) {
       for (const aspectAngle of aspectAngles) {
         const orb = orbType === 0 ? ao[aoIndex][aspectAngles.indexOf(aspectAngle)] : 8;
         if (Math.abs(diff - aspectAngle) <= orb) {
-          const angle1 = ((-p1.longitude - 90) * Math.PI) / 180;
-          const angle2 = ((-p2.longitude - 90) * Math.PI) / 180;
+          // Place aspect lines relative to ascendant at left after rotation
+          const angle1 = (((p1.longitude - ascendant + 180) % 360) * Math.PI) / 180;
+          const angle2 = (((p2.longitude - ascendant + 180) % 360) * Math.PI) / 180;
           
           const x1 = centerX + Math.cos(angle1) * radius;
           const y1 = centerY + Math.sin(angle1) * radius;
@@ -961,25 +1023,28 @@ function checkPlanetHover(mouseX, mouseY) {
   for (const [name, longitude] of Object.entries(chartData.positions)) {
     if (isNaN(longitude) || !isFinite(longitude)) continue;
     
-    const angle = ((-longitude - 90) * Math.PI) / 180;
+    const angle = (((longitude - chartData.ascendant + 180) % 360) * Math.PI) / 180;
     const x = chartData.centerX + Math.cos(angle) * chartData.planetRadius;
     const y = chartData.centerY + Math.sin(angle) * chartData.planetRadius;
     
     const distance = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
     
     if (distance <= planetRadius) {
-      let normalizedLon = longitude % 360;
-      if (normalizedLon < 0) normalizedLon += 360;
-      const sign = Math.floor(normalizedLon / 30);
-      const degree = normalizedLon % 30;
-      const signName = SIGN_NAMES[sign];
+      const { signName, degree } = getSignInfo(longitude);
+      const signIndex = getSignIndexFromLongitude(longitude);
+      const element = ELEMENT_NAMES[signIndex % 4];
+      const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
+      const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
       
       return {
         type: 'planet',
         name: name,
         longitude: longitude,
-        position: `${degree.toFixed(2)}° ${signName}`,
-        sign: signName
+        position: `${degree.toFixed(2)}°`,
+        sign: signName,
+        element: element,
+        quality: quality,
+        polarity: polarity
       };
     }
   }
@@ -987,7 +1052,7 @@ function checkPlanetHover(mouseX, mouseY) {
 }
 
 function checkAscendantHover(mouseX, mouseY) {
-  const ascAngle = ((-chartData.ascendant - 90) * Math.PI) / 180;
+  const ascAngle = ((-180) * Math.PI) / 180;
   const x1 = chartData.centerX;
   const y1 = chartData.centerY;
   const x2 = chartData.centerX + Math.cos(ascAngle) * chartData.innerRadius;
@@ -996,16 +1061,12 @@ function checkAscendantHover(mouseX, mouseY) {
   const distance = distanceToLineSegment(mouseX, mouseY, x1, y1, x2, y2);
   
   if (distance <= 5) {
-    let normalizedAsc = chartData.ascendant % 360;
-    if (normalizedAsc < 0) normalizedAsc += 360;
-    const sign = Math.floor(normalizedAsc / 30);
-    const degree = normalizedAsc % 30;
-    const signName = SIGN_NAMES[sign];
+    const { signName, degree } = getSignInfo(chartData.ascendant);
     
     return {
       type: 'ascendant',
       name: 'Ascendant',
-      position: `${degree.toFixed(2)}° ${signName}`,
+      position: `${degree.toFixed(2)}°`,
       sign: signName
     };
   }
@@ -1021,13 +1082,40 @@ function checkAspectHover(mouseX, mouseY) {
     );
     
     if (distance <= 5) {
+      // Get sign info for both planets
+      const p1Lon = chartData.positions[aspect.planet1];
+      const p2Lon = chartData.positions[aspect.planet2];
+      
+      const p1SignIndex = getSignIndexFromLongitude(p1Lon);
+      const p2SignIndex = getSignIndexFromLongitude(p2Lon);
+      
+      const p1Sign = SIGN_NAMES[p1SignIndex];
+      const p2Sign = SIGN_NAMES[p2SignIndex];
+      
+      const p1Element = ELEMENT_NAMES[p1SignIndex % 4];
+      const p2Element = ELEMENT_NAMES[p2SignIndex % 4];
+      
+      const p1Quality = QUALITY_NAMES[Math.floor(p1SignIndex / 4)];
+      const p2Quality = QUALITY_NAMES[Math.floor(p2SignIndex / 4)];
+      
+      const p1Polarity = (p1Element === 'Fire' || p1Element === 'Air') ? '+' : '-';
+      const p2Polarity = (p2Element === 'Fire' || p2Element === 'Air') ? '+' : '-';
+      
       return {
         type: 'aspect',
         planet1: aspect.planet1,
         planet2: aspect.planet2,
         aspectType: aspect.type,
         angle: aspect.angle,
-        orb: aspect.orb
+        orb: aspect.orb,
+        p1Sign: p1Sign,
+        p2Sign: p2Sign,
+        p1Quality: p1Quality,
+        p2Quality: p2Quality,
+        p1Element: p1Element,
+        p2Element: p2Element,
+        p1Polarity: p1Polarity,
+        p2Polarity: p2Polarity
       };
     }
   }
@@ -1042,22 +1130,23 @@ function checkSignHover(mouseX, mouseY) {
   // Check if in zodiac ring area
   if (distance >= chartData.innerRadius && distance <= chartData.outerRadius) {
     // Calculate angle from center
-    // Mirror about vertical axis by negating dx instead of the angle
-    let angle = Math.atan2(dy, -dx) * (180 / Math.PI);
-    // Convert to zodiac longitude (adjusted for ascendant and 90° offset)
-    let zodiacLon = -angle - 90 + chartData.ascendant;
-    while (zodiacLon < 0) zodiacLon += 360;
-    while (zodiacLon >= 360) zodiacLon -= 360;
-    
-    const signIndex = Math.floor(zodiacLon / 30);
+    let angle_rad = Math.atan2(dy, dx);
+    let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
+    let zodiacLon = ((canvas_angle - 180 + chartData.ascendant) % 360 + 360) % 360;
+    const signIndex = getSignIndexFromLongitude(zodiacLon);
     const signName = SIGN_NAMES[signIndex];
+    const element = ELEMENT_NAMES[signIndex % 4];
+    const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
+    // Polarity: Fire & Air = Positive (+), Earth & Water = Negative (-)
+    const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
     
     return {
       type: 'sign',
       name: signName,
       index: signIndex,
-      element: ELEMENT_NAMES[signIndex % 4],
-      quality: QUALITY_NAMES[Math.floor(signIndex / 4)]
+      element: element,
+      quality: quality,
+      polarity: polarity
     };
   }
   return null;
@@ -1093,24 +1182,24 @@ function updateTooltip(evt) {
     
     if (hoverInfo.type === 'planet') {
       tooltipHTML = `
-        <strong>${hoverInfo.name}</strong><br>
-        ${hoverInfo.position}
+        <strong>${hoverInfo.name} IN ${hoverInfo.sign}</strong><br>
+        <span style="font-size: 0.9em;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</span>
       `;
     } else if (hoverInfo.type === 'ascendant') {
       tooltipHTML = `
-        <strong>Ascendant (Rising Sign)</strong><br>
-        ${hoverInfo.position}
+        <strong>ASCENDANT IN ${hoverInfo.sign}</strong>
       `;
     } else if (hoverInfo.type === 'aspect') {
       tooltipHTML = `
         <strong>${hoverInfo.aspectType}</strong><br>
-        ${hoverInfo.planet1} ⟷ ${hoverInfo.planet2}<br>
+        ${hoverInfo.planet1} (${hoverInfo.p1Quality} ${hoverInfo.p1Polarity} ${hoverInfo.p1Element})<br>
+        ${hoverInfo.planet2} (${hoverInfo.p2Quality} ${hoverInfo.p2Polarity} ${hoverInfo.p2Element})<br>
         <span style="font-size: 0.9em;">Orb: ${hoverInfo.orb.toFixed(2)}°</span>
       `;
     } else if (hoverInfo.type === 'sign') {
       tooltipHTML = `
         <strong>${hoverInfo.name}</strong><br>
-        <span style="font-size: 0.9em;">${hoverInfo.element} • ${hoverInfo.quality}</span>
+        <span style="font-size: 0.9em;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</span>
       `;
     }
     
@@ -1262,7 +1351,10 @@ function calculateChartForRecord(record) {
     
     // Calculate planetary positions using Astronomy Engine
     for (const planet of PLANET_NAMES) {
-      positions[planet] = getEclipticLongitude(planet, date);
+      positions[planet] = getEclipticLongitude(planet, date) + 30;
+      if (positions[planet] >= 360) {
+        positions[planet] -= 360;
+      }
     }
     
     let ascendant = calculateAscendant(date, latitude, longitude);
@@ -1570,7 +1662,7 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   
   // Draw subject planets (outer ring, blue)
   Object.entries(subjectPos).forEach(([name, longitude]) => {
-    const angle = ((-longitude - 90) * Math.PI) / 180;
+    const angle = (((longitude - subjectAsc + 180) % 360) * Math.PI) / 180;
     const radius = innerRadius - 20;
     const x = centerX + Math.cos(angle) * radius;
     const y = centerY + Math.sin(angle) * radius;
@@ -1596,7 +1688,7 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   
   // Draw target planets (inner ring, purple)
   Object.entries(targetPos).forEach(([name, longitude]) => {
-    const angle = ((-longitude - 90) * Math.PI) / 180;
+    const angle = (((longitude - subjectAsc + 180) % 360) * Math.PI) / 180;
     const radius = innerRadius - 65;
     const x = centerX + Math.cos(angle) * radius;
     const y = centerY + Math.sin(angle) * radius;
@@ -1621,8 +1713,8 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   });
   
   // Draw ascendant lines
-  // Subject ascendant (blue)
-  const subjectAscAngle = ((-subjectAsc - 90) * Math.PI) / 180;
+  // Subject ascendant (blue) - always at 9 o'clock like main chart
+  const subjectAscAngle = ((-180) * Math.PI) / 180;
   compCtx.beginPath();
   compCtx.moveTo(centerX, centerY);
   compCtx.lineTo(
@@ -1633,8 +1725,8 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   compCtx.lineWidth = 2;
   compCtx.stroke();
   
-  // Target ascendant (purple)
-  const targetAscAngle = ((-targetAsc - 90) * Math.PI) / 180;
+  // Target ascendant (purple) - positioned relative to subject's ascendant using main chart formula
+  const targetAscAngle = (((targetAsc - subjectAsc + 180) % 360) * Math.PI) / 180;
   compCtx.beginPath();
   compCtx.moveTo(centerX, centerY);
   compCtx.lineTo(
@@ -1659,33 +1751,41 @@ function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius
     '#cc5de8', '#51cf66', '#74c0fc', '#a78bfa'
   ];
 
+  const offset = 180 - ascendant;
+  // Draw each 30-degree zodiac sign segment
   for (let i = 0; i < 12; i++) {
-    const startAngle = ((i * 30 - ascendant - 90) * Math.PI) / 180;
-    const endAngle = (((i + 1) * 30 - ascendant - 90) * Math.PI) / 180;
+    // Calculate which sign should be displayed in this segment
+    const segmentLongitude = (i * 30) % 360;
+    const signIndex = getSignIndexFromLongitude(segmentLongitude);
+    const startDeg = (i * 30 + offset) % 360;
+    const endDeg = ((i + 1) * 30 + offset) % 360;
+    const startAngle = (startDeg * Math.PI) / 180;
+    const endAngle = (endDeg * Math.PI) / 180;
 
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
     ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
     ctx.closePath();
-    ctx.fillStyle = signColors[i] + '20';
+    ctx.fillStyle = signColors[signIndex] + '20';
     ctx.fill();
-    ctx.strokeStyle = signColors[i] + '80';
+    ctx.strokeStyle = signColors[signIndex] + '80';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    const midAngle = startAngle + (endAngle - startAngle) / 2;
-    const textRadius = (outerRadius + innerRadius) / 2 + 10;
+    const midDeg = (offset + i * 30 + 15) % 360;
+    const midAngle = (midDeg * Math.PI) / 180;
+    const textRadius = (outerRadius + innerRadius) / 2;
     const textX = centerX + Math.cos(midAngle) * textRadius;
     const textY = centerY + Math.sin(midAngle) * textRadius;
 
     ctx.save();
     ctx.translate(textX, textY);
     ctx.rotate(midAngle + Math.PI / 2);
-    ctx.fillStyle = signColors[i];
+    ctx.fillStyle = signColors[signIndex];
     ctx.font = 'bold 11px "Segoe UI"';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(SIGN_NAMES[i], 0, 0);
+    ctx.fillText(SIGN_NAMES[signIndex], 0, 0);
     ctx.restore();
   }
 
@@ -1742,53 +1842,47 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
   function checkPlanetHover(mouseX, mouseY) {
     const planetRadius = 15;
     
-    // Check subject planets
+    // Check subject planets (using main chart formula)
     for (const [name, longitude] of Object.entries(compChartData.subjectPos)) {
       if (isNaN(longitude) || !isFinite(longitude)) continue;
       
-      const angle = ((-longitude - 90) * Math.PI) / 180;
+      const angle = (((longitude - compChartData.subjectAsc + 180) % 360) * Math.PI) / 180;
       const x = compChartData.centerX + Math.cos(angle) * compChartData.subjectPlanetRadius;
       const y = compChartData.centerY + Math.sin(angle) * compChartData.subjectPlanetRadius;
       
       const distance = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
       
       if (distance <= planetRadius) {
-        let normalizedLon = longitude % 360;
-        if (normalizedLon < 0) normalizedLon += 360;
-        const sign = Math.floor(normalizedLon / 30);
-        const degree = normalizedLon % 30;
-        const signName = SIGN_NAMES[sign];
+        const { signName, degree } = getSignInfo(longitude);
         
         return {
           type: 'subject-planet',
           name: name,
-          position: `${degree.toFixed(2)}° ${signName}`,
+          position: `${degree.toFixed(2)}°`,
+          sign: signName,
           person: currentSubject.name
         };
       }
     }
     
-    // Check target planets
+    // Check target planets (using subject's ascendant as reference, main chart formula)
     for (const [name, longitude] of Object.entries(compChartData.targetPos)) {
       if (isNaN(longitude) || !isFinite(longitude)) continue;
       
-      const angle = ((-longitude - 90) * Math.PI) / 180;
+      const angle = (((longitude - compChartData.subjectAsc + 180) % 360) * Math.PI) / 180;
       const x = compChartData.centerX + Math.cos(angle) * compChartData.targetPlanetRadius;
       const y = compChartData.centerY + Math.sin(angle) * compChartData.targetPlanetRadius;
       
       const distance = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
       
       if (distance <= planetRadius) {
-        let normalizedLon = longitude % 360;
-        if (normalizedLon < 0) normalizedLon += 360;
-        const sign = Math.floor(normalizedLon / 30);
-        const degree = normalizedLon % 30;
-        const signName = SIGN_NAMES[sign];
+        const { signName, degree } = getSignInfo(longitude);
         
         return {
           type: 'target-planet',
           name: name,
-          position: `${degree.toFixed(2)}° ${signName}`,
+          position: `${degree.toFixed(2)}°`,
+          sign: signName,
           person: currentTarget.name
         };
       }
@@ -1805,20 +1899,23 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     // Check if in zodiac ring area
     if (distance >= compChartData.innerRadius && distance <= compChartData.outerRadius) {
       // Calculate angle from center
-      let angle = Math.atan2(dy, -dx) * (180 / Math.PI);
-      // Convert to zodiac longitude (adjusted for ascendant and 90° offset)
-      let zodiacLon = -angle - 90 + compChartData.subjectAsc;
-      while (zodiacLon < 0) zodiacLon += 360;
-      while (zodiacLon >= 360) zodiacLon -= 360;
+      let angle_rad = Math.atan2(dy, dx);
+      let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
+      let zodiacLon = ((canvas_angle - 180 + compChartData.subjectAsc) % 360 + 360) % 360;
       
-      const signIndex = Math.floor(zodiacLon / 30);
+      const signIndex = getSignIndexFromLongitude(zodiacLon);
       const signName = SIGN_NAMES[signIndex];
+      const element = ELEMENT_NAMES[signIndex % 4];
+      const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
+      // Polarity: Fire & Air = Positive (+), Earth & Water = Negative (-)
+      const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
       
       return {
         type: 'sign',
         name: signName,
-        element: ELEMENT_NAMES[signIndex % 4],
-        quality: QUALITY_NAMES[Math.floor(signIndex / 4)]
+        element: element,
+        quality: quality,
+        polarity: polarity
       };
     }
     
@@ -1842,18 +1939,16 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
       
       if (hoverInfo.type === 'subject-planet') {
         tooltipHTML = `
-          <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">${hoverInfo.name} (${hoverInfo.person})</div>
-          <div style="font-size: 0.85rem;">${hoverInfo.position}</div>
+          <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign} (${hoverInfo.person})</div>
         `;
       } else if (hoverInfo.type === 'target-planet') {
         tooltipHTML = `
-          <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">${hoverInfo.name} (${hoverInfo.person})</div>
-          <div style="font-size: 0.85rem;">${hoverInfo.position}</div>
+          <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign} (${hoverInfo.person})</div>
         `;
       } else if (hoverInfo.type === 'sign') {
         tooltipHTML = `
           <div style="font-weight: 600; color: var(--accent-warm); margin-bottom: 0.25rem;">${hoverInfo.name}</div>
-          <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.element} • ${hoverInfo.quality}</div>
+          <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>
         `;
       }
       

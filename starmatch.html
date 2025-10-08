@@ -29,8 +29,9 @@
             <small id="date-range-hint" style="font-size: 0.7rem; color: #8fa8ce; margin-top: 0.25rem; display: none;"></small>
           </div>
           <div class="input-field">
-            <label for="birth-time">Time (UTC)</label>
+            <label for="birth-time">Time (Local)</label>
             <input type="time" id="birth-time" value="14:14">
+            <small style="font-size: 0.7rem; color: #8fa8ce;">Timezone auto-detected from location</small>
           </div>
         </div>
 
@@ -256,6 +257,8 @@
   <!-- Include dependencies -->
   <script src="script/engine.js"></script>
   <script src="script/location-picker.js"></script>
+  <script src="script/timezone-helper.js"></script>
   <script src="script/starmatch-visualiser.js"></script>
+  <script src="script/self-test.js"></script>
 </body>
 </html>
