@@ -151,6 +151,7 @@ let chartData = {
   ascendant: 0,
   midheaven: 0,
   aspects: [],
+  planetsArray: [],
   centerX: 300,
   centerY: 300,
   planetRadius: 160
@@ -291,7 +292,7 @@ function calculateAscendant(date, latitude, longitude) {
   
   let asc = Math.atan2(y, x) * 180.0 / Math.PI;
   
-  // Normalize to 0-360
+  // Normalise to 0-360
   while (asc < 0) asc += 360;
   while (asc >= 360) asc -= 360;
   
@@ -922,6 +923,7 @@ function drawAspects(centerX, centerY, radius, positions, ascendant, planetsArra
   const aspects = calculateAspects(positions, planetsArray, ascendant, centerX, centerY, radius);
   drawAspectsOnCanvas(ctx, aspects);
   chartData.aspects = aspects;
+  chartData.planetsArray = planetsArray;
 }
 
 // ============================================================================
@@ -1160,42 +1162,39 @@ function distanceToLineSegment(px, py, x1, y1, x2, y2) {
 }
 
 function checkPlanetHover(mouseX, mouseY) {
-  const planetRadius = 12; // Match the planet circle radius
+  const planetRadius = 15; // Increased to ensure we catch planets over aspect lines
   
-  for (const [name, longitude] of Object.entries(chartData.positions)) {
-    if (isNaN(longitude) || !isFinite(longitude)) continue;
-    
-    const angle = (((longitude - chartData.ascendant + 180) % 360) * Math.PI) / 180;
-    const x = chartData.centerX + Math.cos(angle) * chartData.planetRadius;
-    const y = chartData.centerY + Math.sin(angle) * chartData.planetRadius;
-    
-    const distance = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
-    
-    if (distance <= planetRadius) {
-      const { signName, degree } = getSignInfo(longitude);
-      const signIndex = getSignIndexFromLongitude(longitude);
-      const element = ELEMENT_NAMES[signIndex % 4];
-      const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
-      const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
-      const isRuling = RULING_PLANETS[signName] === name;
+  // Use collision-adjusted positions from planetsArray if available
+  if (chartData.planetsArray && chartData.planetsArray.length > 0) {
+    for (const planet of chartData.planetsArray) {
+      const distance = Math.sqrt((mouseX - planet.x) ** 2 + (mouseY - planet.y) ** 2);
       
-      return {
-        type: 'planet',
-        name: name,
-        longitude: longitude,
-        position: `${degree.toFixed(2)}°`,
-        sign: signName,
-        element: element,
-        quality: quality,
-        polarity: polarity,
-        isRuling: isRuling
-      };
+      if (distance <= planetRadius) {
+        const { signName, degree } = getSignInfo(planet.longitude);
+        const signIndex = getSignIndexFromLongitude(planet.longitude);
+        const element = ELEMENT_NAMES[signIndex % 4];
+        const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
+        const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
+        const isRuling = RULING_PLANETS[signName] === planet.name;
+        
+        return {
+          type: 'planet',
+          name: planet.name,
+          longitude: planet.longitude,
+          position: `${degree.toFixed(2)}°`,
+          sign: signName,
+          element: element,
+          quality: quality,
+          polarity: polarity,
+          isRuling: isRuling
+        };
+      }
     }
   }
   return null;
 }
 
-function checkAscendantHover(mouseX, mouseY) {
+function checkMainChartAscendantHover(mouseX, mouseY) {
   const ascAngle = ((-180) * Math.PI) / 180;
   const x1 = chartData.centerX;
   const y1 = chartData.centerY;
@@ -1310,7 +1309,7 @@ function updateTooltip(evt) {
   let hoverInfo = checkPlanetHover(mouseX, mouseY);
   
   if (!hoverInfo) {
-    hoverInfo = checkAscendantHover(mouseX, mouseY);
+    hoverInfo = checkMainChartAscendantHover(mouseX, mouseY);
   }
   
   if (!hoverInfo) {
@@ -1331,7 +1330,8 @@ function updateTooltip(evt) {
       `;
     } else if (hoverInfo.type === 'ascendant') {
       tooltipHTML = `
-        <strong>ASCENDANT IN ${hoverInfo.sign}</strong>
+        <strong>ASCENDANT IN ${hoverInfo.sign}</strong><br>
+        <span style="font-size: 0.9em;">${hoverInfo.position}</span>
       `;
     } else if (hoverInfo.type === 'aspect') {
       tooltipHTML = `
@@ -2168,6 +2168,74 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     return null;
   }
   
+  function checkComparisonChartAscendantHover(mouseX, mouseY) {
+    const centerX = compChartData.centerX;
+    const centerY = compChartData.centerY;
+    const innerRadius = compChartData.innerRadius;
+    
+    // Subject ascendant (blue) - always at 9 o'clock
+    const subjectAscAngle = ((-180) * Math.PI) / 180;
+    const subjectAscX = centerX + Math.cos(subjectAscAngle) * innerRadius;
+    const subjectAscY = centerY + Math.sin(subjectAscAngle) * innerRadius;
+    
+    // Check distance to subject ascendant line
+    const distToSubjectAsc = distanceToLineSegment(
+      mouseX, mouseY,
+      centerX, centerY,
+      subjectAscX, subjectAscY
+    );
+    
+    if (distToSubjectAsc <= 5) {
+      const { signName, degree } = getSignInfo(compChartData.subjectAsc);
+      const signIndex = getSignIndexFromLongitude(compChartData.subjectAsc);
+      const element = ELEMENT_NAMES[signIndex % 4];
+      const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
+      const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
+      
+      return {
+        type: 'subject-ascendant',
+        sign: signName,
+        degree: degree,
+        person: currentSubject.name,
+        element: element,
+        quality: quality,
+        polarity: polarity
+      };
+    }
+    
+    // Target ascendant (purple) - positioned relative to subject's ascendant
+    const targetAscAngle = (((compChartData.targetAsc - compChartData.subjectAsc + 180) % 360) * Math.PI) / 180;
+    const targetAscX = centerX + Math.cos(targetAscAngle) * innerRadius;
+    const targetAscY = centerY + Math.sin(targetAscAngle) * innerRadius;
+    
+    // Check distance to target ascendant line
+    const distToTargetAsc = distanceToLineSegment(
+      mouseX, mouseY,
+      centerX, centerY,
+      targetAscX, targetAscY
+    );
+    
+    if (distToTargetAsc <= 5) {
+      const { signName, degree } = getSignInfo(compChartData.targetAsc);
+      const signIndex = getSignIndexFromLongitude(compChartData.targetAsc);
+      const element = ELEMENT_NAMES[signIndex % 4];
+      const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
+      const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
+      
+      return {
+        type: 'target-ascendant',
+        sign: signName,
+        degree: degree,
+        person: currentTarget.name,
+        element: element,
+        quality: quality,
+        polarity: polarity
+      };
+    }
+    
+    return null;
+  }
+  
   function checkSignHover(mouseX, mouseY) {
     const dx = mouseX - compChartData.centerX;
     const dy = mouseY - compChartData.centerY;
@@ -2304,8 +2372,12 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     const mouseX = mousePos.x;
     const mouseY = mousePos.y;
     
-    // Check planets first, then aspects, then signs
+    // Check planets first, then ascendants, then aspects, then signs
     let hoverInfo = checkPlanetHover(mouseX, mouseY);
+    
+    if (!hoverInfo) {
+      hoverInfo = checkComparisonChartAscendantHover(mouseX, mouseY);
+    }
     
     if (!hoverInfo) {
       hoverInfo = checkAspectHover(mouseX, mouseY);
@@ -2339,6 +2411,18 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
         tooltipHTML = `
           <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign} (${hoverInfo.person})</div>
           <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>${hoverInfo.isRuling ? '<div style="font-size: 0.8rem; color: #ffd700; margin-top: 0.25rem;">⚡ Ruling Planet</div>' : ''}
+        `;
+      } else if (hoverInfo.type === 'subject-ascendant') {
+        tooltipHTML = `
+          <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">ASCENDANT (${hoverInfo.person})</div>
+          <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.sign} ${hoverInfo.degree.toFixed(2)}°</div>
+          <div style="font-size: 0.75rem; color: #8fa8ce; margin-top: 0.25rem;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>
+        `;
+      } else if (hoverInfo.type === 'target-ascendant') {
+        tooltipHTML = `
+          <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">ASCENDANT (${hoverInfo.person})</div>
+          <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.sign} ${hoverInfo.degree.toFixed(2)}°</div>
+          <div style="font-size: 0.75rem; color: #8fa8ce; margin-top: 0.25rem;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>
         `;
       } else if (hoverInfo.type === 'aspect') {
         tooltipHTML = `
@@ -2655,10 +2739,10 @@ canvas.addEventListener('mouseleave', () => {
   canvas.style.cursor = 'default';
 });
 
-// Initialize on load
+// Initialise on load
 document.addEventListener('DOMContentLoaded', () => {
   renderRecords();
 });
 
-// Initialize
+// Initialise
 selectedLocationName.textContent = '';
