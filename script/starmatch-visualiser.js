@@ -2026,6 +2026,20 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     drawAspectsOnCanvas(compCtx, subjectAspects, subjectOpacity);
     drawAspectsOnCanvas(compCtx, targetAspects, targetOpacity);
     
+    // Determine planet opacity based on hovered aspect
+    let subjectPlanetOpacity = 1;
+    let targetPlanetOpacity = 1;
+    
+    if (hoveredPlanet) {
+      if (hoveredPlanet.type === 'subject-planet' || (hoveredPlanet.type === 'aspect' && hoveredPlanet.person === currentSubject.name)) {
+        // Hovering subject planet or subject aspect: dim target planets
+        targetPlanetOpacity = 0.2;
+      } else if (hoveredPlanet.type === 'target-planet' || (hoveredPlanet.type === 'aspect' && hoveredPlanet.person === currentTarget.name)) {
+        // Hovering target planet or target aspect: dim subject planets
+        subjectPlanetOpacity = 0.2;
+      }
+    }
+    
     // Draw subject planets
     subjectPlanetsArray.forEach((planet) => {
       const planetColour = getPlanetColourByLongitude(planet.longitude);
@@ -2033,6 +2047,7 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
       const signName = SIGN_NAMES[signIndex];
       const isRuling = RULING_PLANETS[signName] === planet.name;
       
+      compCtx.globalAlpha = subjectPlanetOpacity;
       compCtx.beginPath();
       compCtx.arc(planet.x, planet.y, 10, 0, Math.PI * 2);
       compCtx.fillStyle = planetColour;
@@ -2046,6 +2061,7 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
       compCtx.textAlign = 'center';
       compCtx.textBaseline = 'middle';
       compCtx.fillText(planetSymbols[planet.planetIndex], planet.x, planet.y);
+      compCtx.globalAlpha = 1;
     });
     
     // Draw target planets
@@ -2055,6 +2071,7 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
       const signName = SIGN_NAMES[signIndex];
       const isRuling = RULING_PLANETS[signName] === planet.name;
       
+      compCtx.globalAlpha = targetPlanetOpacity;
       compCtx.beginPath();
       compCtx.arc(planet.x, planet.y, 10, 0, Math.PI * 2);
       compCtx.fillStyle = planetColour;
@@ -2068,10 +2085,12 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
       compCtx.textAlign = 'center';
       compCtx.textBaseline = 'middle';
       compCtx.fillText(planetSymbols[planet.planetIndex], planet.x, planet.y);
+      compCtx.globalAlpha = 1;
     });
     
     // Draw ascendant lines
     const subjectAscAngle = ((-180) * Math.PI) / 180;
+    compCtx.globalAlpha = subjectPlanetOpacity;
     compCtx.beginPath();
     compCtx.moveTo(centerX, centerY);
     compCtx.lineTo(
@@ -2081,8 +2100,10 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     compCtx.strokeStyle = '#74c0fc';
     compCtx.lineWidth = 2;
     compCtx.stroke();
+    compCtx.globalAlpha = 1;
     
     const targetAscAngle = (((targetAsc - subjectAsc + 180) % 360) * Math.PI) / 180;
+    compCtx.globalAlpha = targetPlanetOpacity;
     compCtx.beginPath();
     compCtx.moveTo(centerX, centerY);
     compCtx.lineTo(
@@ -2094,6 +2115,7 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     compCtx.setLineDash([5, 5]);
     compCtx.stroke();
     compCtx.setLineDash([]);
+    compCtx.globalAlpha = 1;
   }
   
   function getMousePos(canvas, evt) {
