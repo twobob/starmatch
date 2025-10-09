@@ -86,6 +86,7 @@ const dominantInfo = document.getElementById('dominant-info');
 // Constants
 const SIGN_NAMES = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 
                     'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+const SIGN_SYMBOLS = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
 const PLANET_NAMES = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 
                       'Saturn', 'Uranus', 'Neptune', 'Pluto'];
 const ASPECT_NAMES = ['Conjunction', 'Opposition', 'Trine', 'Square', 'Sextile', 'Semi-square', 'Semi-sextile'];
@@ -624,6 +625,11 @@ function drawChartWheel(positions, ascendant, midheaven) {
 }
 
 function drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant) {
+  drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius, ascendant, false);
+}
+
+// Shared zodiac wheel drawing function for both main chart and comparison chart
+function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius, ascendant, isComparisonChart = false) {
   // Derive colours from elements: Fire, Earth, Air, Water pattern
   const getSignColour = (signIndex) => {
     const element = ELEMENT_NAMES[signIndex % 4];
@@ -654,18 +660,41 @@ function drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant) 
     // Center label in the middle of the segment
     const labelDeg = (offset + i * 30 + 15) % 360;
     const labelAngle = (labelDeg * Math.PI) / 180;
-    const textRadius = (outerRadius + innerRadius) / 2;
-    const textX = centerX + Math.cos(labelAngle) * textRadius;
-    const textY = centerY + Math.sin(labelAngle) * textRadius;
+    
+    // Calculate font sizes and offsets based on chart type
+    const nameFontSize = isComparisonChart ? 10 : 12;
+    const symbolFontSize = isComparisonChart ? 20 : 24;
+    const nameOffset = isComparisonChart ? 10 : 15;
+    const symbolOffset = isComparisonChart ? 12 : 24;
+    
+    // Draw sign name (further out)
+    const nameRadius = outerRadius - nameOffset;
+    const nameX = centerX + Math.cos(labelAngle) * nameRadius;
+    const nameY = centerY + Math.sin(labelAngle) * nameRadius;
 
     ctx.save();
-    ctx.translate(textX, textY);
+    ctx.translate(nameX, nameY);
     ctx.rotate(labelAngle + Math.PI / 2);
     ctx.fillStyle = getSignColour(signIndex);
-    ctx.font = 'bold 14px "Segoe UI"';
+    ctx.font = `bold ${nameFontSize}px "Segoe UI"`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(SIGN_NAMES[signIndex], 0, 0);
+    ctx.restore();
+    
+    // Draw sign symbol (inner, larger)
+    const symbolRadius = innerRadius + symbolOffset;
+    const symbolX = centerX + Math.cos(labelAngle) * symbolRadius;
+    const symbolY = centerY + Math.sin(labelAngle) * symbolRadius;
+
+    ctx.save();
+    ctx.translate(symbolX, symbolY);
+    ctx.rotate(labelAngle + Math.PI / 2);
+    ctx.fillStyle = getSignColour(signIndex);
+    ctx.font = `bold ${symbolFontSize}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(SIGN_SYMBOLS[signIndex], 0, 0);
     ctx.restore();
   }
 
@@ -1799,7 +1828,7 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   compCtx.fillRect(0, 0, compCanvas.width, compCanvas.height);
   
   // Draw zodiac wheel using subject's ascendant
-  drawZodiacWheelOnCanvas(compCtx, centerX, centerY, outerRadius, innerRadius, subjectAsc);
+  drawZodiacWheelOnCanvas(compCtx, centerX, centerY, outerRadius, innerRadius, subjectAsc, true);
   
   // Planet symbols
   const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
@@ -1901,62 +1930,6 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetAsc, subjectPlanetsArray, targetPlanetsArray, subjectAspects, targetAspects);
 }
 
-// Helper function to draw zodiac wheel on a specific canvas
-function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius, ascendant) {
-  // Derive colours from elements: Fire, Earth, Air, Water pattern
-  const getSignColour = (signIndex) => {
-    const element = ELEMENT_NAMES[signIndex % 4];
-    return ELEMENT_COLOURS[element];
-  };
-
-  const offset = 180 - ascendant;
-  // Draw each 30-degree zodiac sign segment
-  for (let i = 0; i < 12; i++) {
-    // Calculate which sign should be displayed in this segment
-    const segmentLongitude = (i * 30) % 360;
-    const signIndex = getSignIndexFromLongitude(segmentLongitude);
-    const startDeg = (i * 30 + offset) % 360;
-    const endDeg = ((i + 1) * 30 + offset) % 360;
-    const startAngle = (startDeg * Math.PI) / 180;
-    const endAngle = (endDeg * Math.PI) / 180;
-
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
-    ctx.closePath();
-    const signColour = getSignColour(signIndex);
-    ctx.fillStyle = signColour + '20';
-    ctx.fill();
-    ctx.strokeStyle = signColour + '80';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    const midDeg = (offset + i * 30 + 15) % 360;
-    const midAngle = (midDeg * Math.PI) / 180;
-    const textRadius = (outerRadius + innerRadius) / 2;
-    const textX = centerX + Math.cos(midAngle) * textRadius;
-    const textY = centerY + Math.sin(midAngle) * textRadius;
-
-    ctx.save();
-    ctx.translate(textX, textY);
-    ctx.rotate(midAngle + Math.PI / 2);
-    ctx.fillStyle = getSignColour(signIndex);
-    ctx.font = 'bold 11px "Segoe UI"';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(SIGN_NAMES[signIndex], 0, 0);
-    ctx.restore();
-  }
-
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(5, 7, 15, 0.9)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(94, 197, 255, 0.4)';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-}
-
 // Store event listeners for cleanup
 let comparisonTooltipListeners = null;
 
@@ -2005,7 +1978,7 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     compCtx.fillRect(0, 0, compCanvas.width, compCanvas.height);
     
     // Draw zodiac wheel
-    drawZodiacWheelOnCanvas(compCtx, centerX, centerY, outerRadius, innerRadius, subjectAsc);
+    drawZodiacWheelOnCanvas(compCtx, centerX, centerY, outerRadius, innerRadius, subjectAsc, true);
     
     // Determine which aspects to lighten based on hovered planet
     let subjectOpacity = 0.2;
