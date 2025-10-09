@@ -52,6 +52,7 @@ const btnStarmatchMode = document.getElementById('btn-starmatch-mode');
 const starmatchSection = document.getElementById('starmatch-section');
 const chartInputControls = document.querySelector('.input-controls');
 const chartVisualisation = document.querySelector('.chart-visualisation');
+const aspectGridSection = document.querySelector('.aspect-grid-section');
 const resultsContainer = document.querySelector('.results-container');
 const analysisDetails = document.querySelector('.analysis-details');
 
@@ -1545,16 +1546,36 @@ function updateTooltip(evt) {
 // Mode Switching
 // ============================================================================
 
+/**
+ * Update visibility of UI elements based on the current mode.
+ * This modular function centralises all mode-based show/hide logic.
+ * @param {string} mode - Either 'chart' or 'starmatch'
+ */
+function updateModeVisibility(mode) {
+  if (mode === 'chart') {
+    // Show Chart Mode elements
+    if (starmatchSection) starmatchSection.classList.add('hidden');
+    if (chartInputControls) chartInputControls.style.display = 'grid';
+    if (chartVisualisation) chartVisualisation.style.display = 'block';
+    if (aspectGridSection) aspectGridSection.style.display = 'block';
+    if (resultsContainer) resultsContainer.style.display = 'grid';
+    if (analysisDetails) analysisDetails.style.display = 'block';
+  } else if (mode === 'starmatch') {
+    // Show Starmatch Mode elements, hide Chart Mode elements
+    if (starmatchSection) starmatchSection.classList.remove('hidden');
+    if (chartInputControls) chartInputControls.style.display = 'none';
+    if (chartVisualisation) chartVisualisation.style.display = 'none';
+    if (aspectGridSection) aspectGridSection.style.display = 'none';
+    if (resultsContainer) resultsContainer.style.display = 'none';
+    if (analysisDetails) analysisDetails.style.display = 'none';
+  }
+}
+
 // Mode switching
 function switchToChartMode() {
   btnChartMode.classList.add('active');
   btnStarmatchMode.classList.remove('active');
-  
-  starmatchSection.classList.add('hidden');
-  chartInputControls.style.display = 'grid';
-  chartVisualisation.style.display = 'block';
-  resultsContainer.style.display = 'grid';
-  analysisDetails.style.display = 'block';
+  updateModeVisibility('chart');
 }
 
 function switchToStarmatchMode() {
@@ -1567,12 +1588,7 @@ function switchToStarmatchMode() {
   
   btnStarmatchMode.classList.add('active');
   btnChartMode.classList.remove('active');
-  
-  starmatchSection.classList.remove('hidden');
-  chartInputControls.style.display = 'none';
-  chartVisualisation.style.display = 'none';
-  resultsContainer.style.display = 'none';
-  analysisDetails.style.display = 'none';
+  updateModeVisibility('starmatch');
   
   populateComparisonSelects();
 }
