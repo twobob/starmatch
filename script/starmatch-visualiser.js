@@ -429,6 +429,7 @@ function calculateChart() {
     
     // Display results
     displayPositions(planetaryPositions, ascendant, midheaven);
+    generateAspectGrid(planetaryPositions);
     displayThemes();
     displayAspects();
     displayTraditionalFactors();
@@ -483,6 +484,153 @@ function displayPositions(positions, ascendant, midheaven) {
     `;
     positionsDisplay.appendChild(item);
   }
+}
+
+function generateAspectGrid(positions) {
+  const aspectGrid = document.getElementById('aspect-grid');
+  if (!aspectGrid) return;
+  
+  // Planet symbols
+  const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
+  
+  // Planet speeds (degrees per day, approximate) - used to determine applying/separating
+  const planetSpeeds = [1.0, 13.2, 1.6, 1.2, 0.5, 0.08, 0.03, 0.01, 0.006, 0.004];
+  
+  // Aspect symbols and colors
+  const aspectSymbols = {
+    'Conjunction': { symbol: '☌', color: '#ff6b6b' },
+    'Semi-sextile': { symbol: '⚺', color: '#51cf66' },
+    'Semi-square': { symbol: '∠', color: '#ffd43b' },
+    'Sextile': { symbol: '⚹', color: '#74c0fc' },
+    'Square': { symbol: '□', color: '#ff6b6b' },
+    'Trine': { symbol: '△', color: '#51cf66' },
+    'Opposition': { symbol: '☍', color: '#a78bfa' }
+  };
+  
+  // Calculate all aspects between planets
+  const planetLongitudes = Object.entries(positions).map(([name, lon]) => ({
+    name,
+    longitude: lon,
+    index: PLANET_NAMES.indexOf(name)
+  })).filter(p => p.index !== -1).sort((a, b) => a.index - b.index);
+  
+  const aspectAngles = [0, 180, 120, 90, 60, 45, 30];
+  const aspectMap = {};
+  
+  // Build aspect map
+  planetLongitudes.forEach((p1, i) => {
+    planetLongitudes.forEach((p2, j) => {
+      if (i >= j) return; // Only calculate each pair once, skip diagonal
+      
+      let diff = Math.abs(p1.longitude - p2.longitude);
+      if (diff > 180) diff = 360 - diff;
+      
+      for (const aspectAngle of aspectAngles) {
+        const orb = orbType === 0 ? ao[aoIndex][aspectAngles.indexOf(aspectAngle)] : 8;
+        if (Math.abs(diff - aspectAngle) <= orb) {
+          const aspectTypes = {
+            0: 'Conjunction',
+            30: 'Semi-sextile',
+            45: 'Semi-square',
+            60: 'Sextile',
+            90: 'Square',
+            120: 'Trine',
+            180: 'Opposition'
+          };
+          
+          // Calculate orb - this gives us the signed offset from exactness
+          // Positive means past the exact angle, negative means before it
+          const orbDifference = diff - aspectAngle;
+          const orbValue = Math.abs(orbDifference);
+          
+          // Determine if applying or separating based on planetary motion
+          const fasterPlanetIndex = planetSpeeds[p1.index] > planetSpeeds[p2.index] ? i : j;
+          const slowerPlanetIndex = fasterPlanetIndex === i ? j : i;
+          const fasterLon = planetLongitudes[fasterPlanetIndex].longitude;
+          const slowerLon = planetLongitudes[slowerPlanetIndex].longitude;
+          
+          // Calculate if faster planet is ahead or behind slower planet
+          let separation = (fasterLon - slowerLon + 360) % 360;
+          const isApplying = separation > 180; // Faster planet is behind, approaching
+          
+          const key = `${i}-${j}`;
+          aspectMap[key] = {
+            type: aspectTypes[aspectAngle],
+            orb: orbValue,
+            signedOrb: orbDifference, // Keep the actual signed difference from exact angle
+            applying: isApplying,
+            angle: aspectAngle
+          };
+          break;
+        }
+      }
+    });
+  });
+  
+  // Generate HTML table
+  let html = '<table><thead><tr><th></th>';
+  planetLongitudes.forEach(p => {
+    html += `<th>${planetSymbols[p.index]}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+  
+  planetLongitudes.forEach((p1, i) => {
+    html += `<tr><th>${planetSymbols[p1.index]}</th>`;
+    planetLongitudes.forEach((p2, j) => {
+      if (i === j) {
+        // Diagonal - empty
+        html += '<td class="diagonal"></td>';
+      } else {
+        const key = i < j ? `${i}-${j}` : `${j}-${i}`;
+        const aspect = aspectMap[key];
+        
+        if (aspect) {
+          const aspectInfo = aspectSymbols[aspect.type] || { symbol: '?', color: '#888' };
+          const letter = aspect.applying ? 'A' : 'S';
+          html += `<td class="has-aspect" data-aspect="${aspect.type}" data-orb="${aspect.signedOrb.toFixed(0)}" data-letter="${letter}" title="${aspect.type} (${aspect.applying ? 'Applying' : 'Separating'} ${aspect.orb.toFixed(2)}°)"><canvas width="60" height="60" data-symbol="${aspectInfo.symbol}" data-color="${aspectInfo.color}" data-orb="${aspect.signedOrb.toFixed(0)}" data-letter="${letter}"></canvas></td>`;
+        } else {
+          html += '<td></td>';
+        }
+      }
+    });
+    html += '</tr>';
+  });
+  
+  html += '</tbody></table>';
+  aspectGrid.innerHTML = html;
+  
+  // Draw symbols and text on canvases
+  requestAnimationFrame(() => {
+    aspectGrid.querySelectorAll('canvas').forEach(canvas => {
+      const ctx = canvas.getContext('2d');
+      const symbol = canvas.dataset.symbol;
+      const color = canvas.dataset.color;
+      const orb = canvas.dataset.orb;
+      const letter = canvas.dataset.letter;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw aspect symbol on left side (lower-left area)
+      ctx.fillStyle = color;
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(symbol, 8, canvas.height - 8);
+      
+      // Draw orb number on right side (top-right)
+      ctx.fillStyle = '#e2eeff';
+      ctx.font = 'bold 22px Arial';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'top';
+      ctx.fillText(orb, canvas.width - 4, 4);
+      
+      // Draw letter on right side (bottom-right)
+      ctx.font = 'bold 20px Arial';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(letter, canvas.width - 4, canvas.height - 4);
+    });
+  });
 }
 
 function displayThemes() {
@@ -620,8 +768,8 @@ function drawChartWheel(positions, ascendant, midheaven) {
 
   drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant);
   drawHouseCusps(centerX, centerY, innerRadius, ascendant);
-  const planetsArray = drawPlanets(centerX, centerY, innerRadius - 60, positions, ascendant);
-  drawAspects(centerX, centerY, innerRadius - 60, positions, ascendant, planetsArray);
+  const planetsArray = drawPlanets(centerX, centerY, innerRadius - 30, positions, ascendant);
+  drawAspects(centerX, centerY, innerRadius - 30, positions, ascendant, planetsArray);
 }
 
 function drawZodiacWheel(centerX, centerY, outerRadius, innerRadius, ascendant) {
@@ -726,7 +874,7 @@ function drawHouseCusps(centerX, centerY, radius, ascendant) {
   ctx.textAlign = 'center';
   const labelX = centerX + Math.cos(ascAngle) * (radius - 20);
   const labelY = centerY + Math.sin(ascAngle) * (radius - 20);
-  ctx.fillText('ASC', labelX, labelY);
+  ctx.fillText('AC', labelX, labelY);
 }
 
 // Collision detection and stacking helper function
@@ -905,6 +1053,8 @@ function calculateAspects(positions, planetsArray, ascendant, centerX, centerY, 
           // Determine aspect type name
           const aspectTypes = {
             0: 'Conjunction',
+            30: 'Semi-sextile',
+            45: 'Semi-square',
             60: 'Sextile',
             90: 'Square',
             120: 'Trine',
@@ -2725,6 +2875,21 @@ analysisToggle?.addEventListener('click', () => {
       icon.textContent = isCollapsed ? '▶' : '▼';
     }
   }
+});
+
+// Collapsible sections for planetary positions and theme values
+document.querySelectorAll('.collapsible-section .collapse-toggle').forEach(button => {
+  button.addEventListener('click', () => {
+    const targetId = button.dataset.target;
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+      const isCollapsed = targetElement.classList.toggle('collapsed');
+      const icon = button.querySelector('.collapse-icon');
+      if (icon) {
+        icon.textContent = isCollapsed ? '▶' : '▼';
+      }
+    }
+  });
 });
 
 // Canvas tooltips

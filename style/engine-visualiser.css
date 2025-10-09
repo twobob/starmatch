@@ -725,6 +725,116 @@ h3 {
   gap: 2rem;
 }
 
+/* Collapsible Section Styling */
+.collapsible-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.collapsible-section .section-header h3 {
+  margin: 0;
+}
+
+.collapsible-section .collapsed {
+  display: none;
+}
+
+.collapsible-section .collapse-toggle {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0.5rem;
+  font-size: 1rem;
+  transition: transform 0.2s;
+}
+
+.collapsible-section .collapse-toggle .collapse-icon {
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+.collapsible-section .collapsed + .collapse-toggle .collapse-icon {
+  transform: rotate(-90deg);
+}
+
+/* Aspect Grid Section */
+.aspect-grid-section {
+  margin-top: 2rem;
+  background: rgba(10, 13, 19, 0.5);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.aspect-grid-section h3 {
+  margin: 0 0 1rem 0;
+  color: var(--accent);
+  font-size: 1.25rem;
+}
+
+.aspect-grid-container {
+  overflow: visible;
+  width: 100%;
+}
+
+.aspect-grid {
+  width: 100%;
+}
+
+.aspect-grid table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.aspect-grid th,
+.aspect-grid td {
+  border: 1px solid rgba(94, 197, 255, 0.15);
+  text-align: center;
+  vertical-align: middle;
+  position: relative;
+  width: calc(100% / 11);
+}
+
+.aspect-grid th {
+  background: rgba(94, 197, 255, 0.12);
+  color: var(--accent-warm);
+  font-weight: 600;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  padding: clamp(0.25rem, 1vw, 0.75rem);
+}
+
+.aspect-grid td {
+  background: rgba(10, 13, 19, 0.6);
+  height: auto;
+  padding: 0;
+  aspect-ratio: 1;
+}
+
+.aspect-grid td.diagonal {
+  background: rgba(40, 45, 60, 0.5);
+}
+
+.aspect-grid td canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.aspect-grid td.has-aspect {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.aspect-grid td.has-aspect:hover {
+  background: rgba(94, 197, 255, 0.15);
+}
+
 .planetary-positions,
 .theme-chart {
   background: rgba(10, 13, 19, 0.5);
@@ -1009,6 +1119,21 @@ canvas {
     padding: 1rem;
     max-width: 100vw;
     overflow-x: hidden;
+  }
+  
+  /* Aspect grid mobile adjustments */
+  .aspect-grid-section {
+    padding: 0.75rem;
+  }
+  
+  .aspect-grid th {
+    font-size: clamp(0.6rem, 2vw, 0.8rem);
+    padding: clamp(0.2rem, 1vw, 0.4rem);
+  }
+  
+  .aspect-grid td canvas {
+    width: 100%;
+    height: 100%;
   }
   
   /* Force all containers to respect viewport width */
