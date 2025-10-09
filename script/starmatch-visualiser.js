@@ -802,6 +802,17 @@ function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius
     const signColour = getSignColour(signIndex);
     ctx.fillStyle = signColour + '20';
     ctx.fill();
+    
+    // Draw radial segment dividers from outer edge to inner edge only
+    ctx.beginPath();
+    ctx.moveTo(
+      centerX + Math.cos(startAngle) * innerRadius,
+      centerY + Math.sin(startAngle) * innerRadius
+    );
+    ctx.lineTo(
+      centerX + Math.cos(startAngle) * outerRadius,
+      centerY + Math.sin(startAngle) * outerRadius
+    );
     ctx.strokeStyle = signColour + '80';
     ctx.lineWidth = 1;
     ctx.stroke();
@@ -857,25 +868,44 @@ function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius
 }
 
 function drawHouseCusps(centerX, centerY, radius, ascendant) {
-  // Ascendant is always at -180deg (9 o'clock / left side)
-  const ascAngle = ((-180) * Math.PI) / 180;
-  
-  ctx.beginPath();
-  ctx.moveTo(centerX, centerY);
-  ctx.lineTo(
-    centerX + Math.cos(ascAngle) * radius,
-    centerY + Math.sin(ascAngle) * radius
-  );
-  ctx.strokeStyle = '#ffb85e';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  ctx.fillStyle = '#ffb85e';
-  ctx.font = 'bold 12px "Segoe UI"';
-  ctx.textAlign = 'center';
-  const labelX = centerX + Math.cos(ascAngle) * (radius - 20);
-  const labelY = centerY + Math.sin(ascAngle) * (radius - 20);
-  ctx.fillText('AC', labelX, labelY);
+  // Draw 12 house cusp lines at fixed clock positions
+  // These are independent of zodiac rotation
+  for (let i = 0; i < 12; i++) {
+    // Fixed positions: start at 12 o'clock (-90°) and go clockwise
+    // 12=top (-90°), 1=(-60°), 2=(-30°), 3=(0°), etc.
+    const houseAngle = ((-90 + i * 30) * Math.PI) / 180;
+    
+    // House 9 (at i=9: -90° + 270° = 180°) is at 9 o'clock (-180° when normalized)
+    const isAscendant = (i === 9);
+    
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(
+      centerX + Math.cos(houseAngle) * radius,
+      centerY + Math.sin(houseAngle) * radius
+    );
+    
+    if (isAscendant) {
+      // Ascendant line - bold and highlighted
+      ctx.strokeStyle = '#ffb85e';
+      ctx.lineWidth = 3;
+    } else {
+      // Regular house cusps - subtle
+      ctx.strokeStyle = 'rgba(94, 197, 255, 0.3)';
+      ctx.lineWidth = 1;
+    }
+    ctx.stroke();
+    
+    // Label only the Ascendant
+    if (isAscendant) {
+      ctx.fillStyle = '#ffb85e';
+      ctx.font = 'bold 12px "Segoe UI"';
+      ctx.textAlign = 'center';
+      const labelX = centerX + Math.cos(houseAngle) * (radius - 20);
+      const labelY = centerY + Math.sin(houseAngle) * (radius - 20);
+      ctx.fillText('AC', labelX, labelY);
+    }
+  }
 }
 
 // Collision detection and stacking helper function
