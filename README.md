@@ -42,12 +42,11 @@ An interactive browser-based astrological calculation engine for precise natal c
    - **Overlay Chart**: Both charts displayed simultaneously (blue vs red)
 6. **Quick Test**: Press `0` key to auto-load first two records and compare
 
-![bafkreiewwh6sbbdh4bb7jpgy4lr42cmdl2a52clwffleimg2idtyvwjq4q](https://github.com/user-attachments/assets/a951bb0e-4ec4-485f-8852-4acbe1711ff0)
+<img width="532"  alt="image" src="https://github.com/user-attachments/assets/c25ef90f-827e-4fb4-b837-0bd72fd87f2d" />
 
-![bafkreidja3wwdrcyomqpfvswwtebayeayttkmuwexwmxy6yjv4dbtsvjdu](https://github.com/user-attachments/assets/79207cee-e21d-4378-9142-7bad4e2823f6)
+<img width="526"  alt="image" src="https://github.com/user-attachments/assets/d3822ccd-885a-4df3-b802-a891ba9984f2" />
 
-![bafkreieagwtacshthim6nvnlubgrvksvgxfh4thropn6crhn7nlu3h6ljy](https://github.com/user-attachments/assets/518a5bc4-ff53-434c-82be-d6ec48e54354)
-
+<img width="516"  alt="image" src="https://github.com/user-attachments/assets/3a9f6fb0-efc4-4d70-b14a-8fc2213ed620" />
 
 ## Core Files
 
