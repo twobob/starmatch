@@ -1239,53 +1239,16 @@ function showToast(message, type = 'info', duration = 4000) {
 // Storage & CRUD Functions
 // ============================================================================
 
-const STORAGE_KEY = 'astro_records_v1';
-
-function loadRecords() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (e) {
-    console.error('Error loading records:', e);
-    return [];
-  }
-}
-
-function saveRecords(records) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-}
-
-function addRecord(data) {
-  const records = loadRecords();
-  records.push(data);
-  saveRecords(records);
-  return records;
-}
-
-function updateRecord(id, patch) {
-  const records = loadRecords();
-  const idx = records.findIndex(r => r.id === id);
-  if (idx !== -1) {
-    records[idx] = { ...records[idx], ...patch, updatedAt: new Date().toISOString() };
-    saveRecords(records);
-  }
-  return records;
-}
-
-function deleteRecord(id) {
-  const records = loadRecords().filter(r => r.id !== id);
-  saveRecords(records);
-  return records;
-}
-
-function clearAllRecords() {
-  saveRecords([]);
-}
+// Use StorageManager module functions instead of duplicates
+const loadRecords = () => StorageManager.load();
+const saveRecords = (records) => StorageManager.save(records);
+const addRecord = (data) => StorageManager.add(data);
+const updateRecord = (id, patch) => StorageManager.update(id, patch);
+const deleteRecord = (id) => StorageManager.delete(id);
+const clearAllRecords = () => StorageManager.clear();
 
 function buildRecordPayload(name) {
-  return {
-    id: crypto.randomUUID(),
-    name: name && name.trim() ? name.trim() : 'Untitled',
+  return StorageManager.build(name, {
     date: birthDate.value || '',
     time: birthTime.value || '',
     lat: latitudeInput.value || '',
@@ -1293,10 +1256,8 @@ function buildRecordPayload(name) {
     orbType: orbTypeSelect.value,
     aspectOrbSet: aspectOrbSetSelect.value,
     rulershipSet: rulershipSetSelect.value,
-    precession: precessionCheckbox.checked ? 1 : 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
+    precession: precessionCheckbox.checked ? 1 : 0
+  });
 }
 
 function renderRecords() {
