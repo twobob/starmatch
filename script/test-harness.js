@@ -7,13 +7,13 @@
 // Individual test suites can be enabled/disabled independently
 // Useful for debugging specific modules without running entire test suite
 window.ENABLE_TESTS = {
-  all: true,                    // Master switch - disables everything if false
-  constants: true,              // Configuration constants validation
+  all: false,                   // Master switch - disables everything if false
+  constants: false,             // Configuration constants validation
   storage: false,               // LocalStorage CRUD operations (disabled - modifies data)
-  astronomical: true,           // Astronomy calculations (when implemented)
-  zodiac: true,                 // Zodiac math and coordinate transformations (when implemented)
-  chartRenderer: true,          // Canvas rendering functions (when implemented)
-  comparison: true              // xProfile and comparison engine (when implemented)
+  astronomical: false,          // Astronomy calculations (when implemented)
+  zodiac: false,                // Zodiac math and coordinate transformations (when implemented)
+  chartRenderer: false,         // Canvas rendering functions (when implemented)
+  comparison: false             // xProfile and comparison engine (when implemented)
 };
 
 const TestHarness = {
@@ -25,7 +25,15 @@ const TestHarness = {
   
   runAll() {
     if (!window.ENABLE_TESTS.all) {
-      console.log('Tests disabled (set window.ENABLE_TESTS.all = true to enable)');
+      return;
+    }
+    
+    // Check if any tests are actually enabled
+    const hasEnabledTests = Object.keys(window.ENABLE_TESTS)
+      .filter(key => key !== 'all')
+      .some(key => window.ENABLE_TESTS[key]);
+    
+    if (!hasEnabledTests) {
       return;
     }
     
@@ -37,8 +45,6 @@ const TestHarness = {
       if (window.ENABLE_TESTS[configKey]) {
         const result = testSuite.runAll();
         results.push({ name, ...result });
-      } else {
-        console.log(`Skipping ${name} (disabled in ENABLE_TESTS.${configKey})`);
       }
     });
     
@@ -71,7 +77,6 @@ window.addEventListener('DOMContentLoaded', () => {
   if (window.ENABLE_TESTS.all) {
     // Delay to let all modules load
     setTimeout(() => {
-      console.log('Auto-running tests (set window.ENABLE_TESTS.all = false to disable)');
       TestHarness.runAll();
     }, 500);
   }
