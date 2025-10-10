@@ -2056,12 +2056,12 @@ function displayComparisonResults(subjectThemes, targetThemes, subjectPos, targe
   </div>`;
   
   // Bottom section with theme analysis and info text side-by-side (responsive grid)
-  html += `<div class="comparison-grid" style="margin-top: 1rem; gap: 1rem;">
-    <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15); grid-column: 1;">
+  html += `<div class="comparison-grid" style="margin-top: 1rem;">
+    <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15);">
       <h4 style="color: var(--accent); margin-top: 0;">Theme-by-Theme Analysis</h4>
       ${themeAnalysisHTML}
     </div>
-    <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15); grid-column: 2;">
+    <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15);">
       <div style="font-size: 0.75rem; color: #8fa8ce; line-height: 1.6;">
         <strong style="color: #b8d0f0;">Understanding xProfile Values:</strong><br><br>
         <span style="color: #74c0fc;">+1.0</span> = Charts have same shape (similarity)<br><br>
