@@ -868,6 +868,9 @@ function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius
 }
 
 function drawHouseCusps(centerX, centerY, radius, ascendant) {
+  // Roman numerals for houses
+  const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+  const regularNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   // Draw 12 house cusp lines at fixed clock positions
   // These are independent of zodiac rotation
   for (let i = 0; i < 12; i++) {
@@ -898,13 +901,39 @@ function drawHouseCusps(centerX, centerY, radius, ascendant) {
     
     // Label only the Ascendant
     if (isAscendant) {
-      ctx.fillStyle = '#ffb85e';
+      ctx.fillStyle = '#ffb95eff';
       ctx.font = 'bold 12px "Segoe UI"';
       ctx.textAlign = 'center';
       const labelX = centerX + Math.cos(houseAngle) * (radius - 20);
       const labelY = centerY + Math.sin(houseAngle) * (radius - 20);
       ctx.fillText('AC', labelX, labelY);
     }
+  }
+  
+  // Draw Roman numerals for houses
+  // House I starts just above (north of) the Ascendant at 9 o'clock
+  // The Ascendant line is at position 9 (270° from 12 o'clock)
+  // House I should be in the segment ABOVE it (between positions 8 and 9)
+  // So we offset by +15° to center it in the segment
+  for (let i = 0; i < 12; i++) {
+    // Start at position 9 (north/above 9 o'clock) and count clockwise
+    // Add 15° to center the numeral in the middle of each house segment
+    const houseNumAngle  = ((-90 + (9 + i) * 30 + 15) * Math.PI) / 180;
+    
+    // Place numerals in the middle of the house area (between center and inner radius)
+    const numeralRadius = radius * 0.45;
+    const numeralX = centerX + Math.cos(houseNumAngle) * numeralRadius;
+    const numeralY = centerY + Math.sin(houseNumAngle) * numeralRadius;
+    
+    ctx.save();
+    ctx.translate(numeralX, numeralY);
+    ctx.rotate(houseNumAngle + Math.PI / 2);
+    ctx.fillStyle = 'rgba(94, 197, 255, 0.1)';
+    ctx.font = 'bold 24px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(regularNumbers[i], 0, 0);
+    ctx.restore();
   }
 }
 
