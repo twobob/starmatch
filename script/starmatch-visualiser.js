@@ -196,6 +196,7 @@ let chartData = {
 
 // Astronomy Engine availability flag
 let astronomyEngineReady = false;
+window.astronomyEngineReady = false;
 
 // ============================================================================
 // Load Astronomy Engine with Fallback
@@ -223,6 +224,7 @@ let astronomyEngineReady = false;
     script.onload = () => {
       if (typeof window.Astronomy === 'object') {
         astronomyEngineReady = true;
+        window.astronomyEngineReady = true;
         btnCalculate.disabled = false;
         btnCalculate.textContent = "Calculate Chart";
         showToast("Astronomy Engine loaded successfully", "success", 2000);
@@ -248,113 +250,10 @@ let astronomyEngineReady = false;
 // Helper Functions
 // ============================================================================
 
-function TidyUpAndFloat(value) {
-  return parseFloat(value) || 0;
-}
+// Note: TidyUpAndFloat removed - no longer needed
 
-function toUTC(dateStr, timeStr, latitude, longitude) {
-  // Use timezone helper if available for automatic detection
-  if (typeof window.TimezoneHelper !== 'undefined') {
-    const result = window.TimezoneHelper.localToUTC(dateStr, timeStr, latitude, longitude);
-    if (result) {
-      return result.utcDate;
-    }
-  }
-  
-  // Fallback: treat as UTC if helper not available
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
-  const t = /^(\d{2}):(\d{2})$/.exec(timeStr);
-  if (!m || !t) return null;
-  const [_, Y, M, D] = m;
-  const [__, h, min] = t;
-  return new Date(Date.UTC(+Y, +M - 1, +D, +h, +min, 0, 0));
-}
-
-// ============================================================================
-// Astronomy Engine Calculations
-// ============================================================================
-
-function getEclipticLongitude(bodyName, date) {
-  if (!astronomyEngineReady || typeof Astronomy === 'undefined') {
-    throw new Error('Astronomy Engine not loaded');
-  }
-  
-  const time = Astronomy.MakeTime(date);
-  
-  if (bodyName === 'Sun') {
-    // Sun's ecliptic longitude
-    const ecliptic = Astronomy.SunPosition(time);
-    return ecliptic.elon;
-  } else if (bodyName === 'Moon') {
-    // Moon's geocentric ecliptic longitude
-    // GeoMoon returns geocentric equatorial position
-    const moonEq = Astronomy.GeoMoon(time);
-    // Convert equatorial vector to ecliptic
-    const moonEcl = Astronomy.Ecliptic(moonEq);
-    return moonEcl.elon;
-  } else {
-    // Planets: Get geocentric ecliptic coordinates
-    const body = Astronomy.Body[bodyName];
-    const vec = Astronomy.GeoVector(body, time, true); // aberration=true
-    
-    // Convert to ecliptic coordinates
-    const ecliptic = Astronomy.Ecliptic(vec);
-    return ecliptic.elon;
-  }
-}
-
-function calculateAscendant(date, latitude, longitude) {
-  // Use Astronomy Engine for sidereal time calculation
-  const time = Astronomy.MakeTime(date);
-  const gmst = Astronomy.SiderealTime(time); // In sidereal hours
-  
-  // Calculate Local Sidereal Time in degrees
-  let lst = (gmst * 15.0 + longitude) % 360;
-  if (lst < 0) lst += 360;
-  
-  // Calculate obliquity of the ecliptic
-  const jd = (date.getTime() / 86400000) + 2440587.5;
-  const T = (jd - 2451545.0) / 36525.0;
-  const eps = 23.439292 - 0.0130042 * T - 0.00000016 * T * T + 0.000000504 * T * T * T;
-  
-  // Convert to radians
-  const lstRad = lst * Math.PI / 180.0;
-  const epsRad = eps * Math.PI / 180.0;
-  const latRad = latitude * Math.PI / 180.0;
-  
-  // Ascendant formula: atan2(-cos(LST), sin(LST)*cos(ε) + tan(lat)*sin(ε))
-  // This formula gives the ecliptic longitude of the eastern horizon point
-  const y = -Math.cos(lstRad);
-  const x = Math.sin(lstRad) * Math.cos(epsRad) + Math.tan(latRad) * Math.sin(epsRad);
-  
-  let asc = Math.atan2(y, x) * 180.0 / Math.PI;
-  
-  // Normalise to 0-360
-  while (asc < 0) asc += 360;
-  while (asc >= 360) asc -= 360;
-  
-  // Apply 209.917° correction to align with tropical zodiac reference frame
-  // This precise value accounts for coordinate system orientation and minimises deviation
-  asc = (asc + 209.917) % 360;
-  
-  return asc;
-}
-
-// Calculate Midheaven (Medium Coeli / MC) - the ecliptic degree at the upper meridian
-// The MC is the point where the ecliptic crosses the meridian, representing the 10th house cusp
-// Formula: MC = Local Sidereal Time (LST) converted to ecliptic longitude
-// Reference: https://en.wikipedia.org/wiki/Midheaven
-function calculateMidheaven(date, longitude) {
-  const jd = (date.getTime() / 86400000) + 2440587.5;
-  const T = (jd - 2451545.0) / 36525.0;
-  const gmst = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 
-               0.000387933 * T * T - (T * T * T) / 38710000.0;
-  let lst = (gmst + longitude) % 360;
-  if (lst < 0) lst += 360;
-  let mc = lst % 360;
-  if (mc < 0) mc += 360;
-  return mc;
-}
+// Note: toUTC, getEclipticLongitude, calculateAscendant, calculateMidheaven
+// moved to astronomical-calculations.js module and accessed via AstroCalc.*
 
 // ============================================================================
 // Chart Calculation
@@ -376,7 +275,7 @@ function calculateChart() {
     return;
   }
 
-  const date = toUTC(dateStr, timeStr, latitude, longitude);
+  const date = AstroCalc.toUTC(dateStr, timeStr, latitude, longitude);
   if (!date || !isFinite(latitude) || !isFinite(longitude)) {
     showToast('Invalid date, time, or coordinates', 'error');
     return;
@@ -388,7 +287,7 @@ function calculateChart() {
     
     for (const planetName of PLANET_NAMES) {
       try {
-        const longitude = getEclipticLongitude(planetName, date);
+        const longitude = AstroCalc.getEclipticLongitude(planetName, date);
         planetaryPositions[planetName] = longitude + 30;
         if (planetaryPositions[planetName] >= 360) {
           planetaryPositions[planetName] -= 360;
@@ -400,8 +299,8 @@ function calculateChart() {
     }
 
     // Calculate Ascendant and Midheaven
-    let ascendant = calculateAscendant(date, latitude, longitude);
-    let midheaven = calculateMidheaven(date, longitude);
+    let ascendant = AstroCalc.calculateAscendant(date, latitude, longitude);
+    let midheaven = AstroCalc.calculateMidheaven(date, longitude);
 
     // Apply engine settings to global variables from engine.js
     window.orbType = parseInt(orbTypeSelect.value);
@@ -1748,7 +1647,7 @@ function calculateChartForRecord(record) {
     const longitude = parseFloat(record.lon);
     
     // Create UTC date from record
-    const date = toUTC(record.date, record.time);
+    const date = AstroCalc.toUTC(record.date, record.time);
     if (!date) {
       console.error('Invalid date/time in record');
       return null;
@@ -1758,14 +1657,14 @@ function calculateChartForRecord(record) {
     
     // Calculate planetary positions using Astronomy Engine
     for (const planet of PLANET_NAMES) {
-      positions[planet] = getEclipticLongitude(planet, date) + 30;
+      positions[planet] = AstroCalc.getEclipticLongitude(planet, date) + 30;
       if (positions[planet] >= 360) {
         positions[planet] -= 360;
       }
     }
     
-    let ascendant = calculateAscendant(date, latitude, longitude);
-    let midheaven = calculateMidheaven(date, longitude);
+    let ascendant = AstroCalc.calculateAscendant(date, latitude, longitude);
+    let midheaven = AstroCalc.calculateMidheaven(date, longitude);
     
     // Apply CURRENT UI engine settings to global variables from engine.js
     window.orbType = parseInt(orbTypeSelect.value);

@@ -10,7 +10,7 @@ window.ENABLE_TESTS = {
   all: false,                   // Master switch - disables everything if false
   constants: false,             // Configuration constants validation
   storage: false,               // LocalStorage CRUD operations (disabled - modifies data)
-  astronomical: false,          // Astronomy calculations (when implemented)
+  astronomical: false,          // Astronomy calculations with verified expected values
   zodiac: false,                // Zodiac math and coordinate transformations (when implemented)
   chartRenderer: false,         // Canvas rendering functions (when implemented)
   comparison: false             // xProfile and comparison engine (when implemented)
@@ -75,10 +75,19 @@ const TestHarness = {
 // Auto-run tests on page load if enabled
 window.addEventListener('DOMContentLoaded', () => {
   if (window.ENABLE_TESTS.all) {
-    // Delay to let all modules load
-    setTimeout(() => {
-      TestHarness.runAll();
-    }, 500);
+    // Wait for Astronomy Engine to load if astronomical tests are enabled
+    if (window.ENABLE_TESTS.astronomical) {
+      window.addEventListener('astronomyEngineReady', () => {
+        setTimeout(() => {
+          TestHarness.runAll();
+        }, 100);
+      });
+    } else {
+      // No astronomical tests, run immediately
+      setTimeout(() => {
+        TestHarness.runAll();
+      }, 500);
+    }
   }
 });
 
