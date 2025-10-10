@@ -1065,6 +1065,13 @@ canvas {
   width: 100%;
 }
 
+/* Aspect grid canvases should not have rounded corners */
+.aspect-grid td canvas {
+  border-radius: 0;
+  background: none;
+  border: none;
+}
+
 /* Chart Tooltip */
 .chart-tooltip {
   position: fixed;
