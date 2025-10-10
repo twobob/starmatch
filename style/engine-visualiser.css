@@ -802,6 +802,7 @@ h3 {
   position: relative;
   width: calc(100% / 11);
   min-width: 0;
+  border-radius: 0;
 }
 
 .aspect-grid th {
