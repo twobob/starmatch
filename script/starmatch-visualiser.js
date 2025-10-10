@@ -635,8 +635,26 @@ function generateAspectGrid(positions) {
   html += '</tbody></table>';
   aspectGrid.innerHTML = html;
   
-  // Draw symbols and text on canvases
+  // Force square cells by setting explicit heights based on width
+  const enforceSquareCells = () => {
+    const cells = aspectGrid.querySelectorAll('td');
+    cells.forEach(cell => {
+      const width = cell.getBoundingClientRect().width;
+      cell.style.height = `${width}px`;
+      cell.style.minHeight = `${width}px`;
+      cell.style.maxHeight = `${width}px`;
+    });
+  };
+  
+  // Apply immediately
+  enforceSquareCells();
+  
+  // And after DOM settles
   requestAnimationFrame(() => {
+    enforceSquareCells();
+    setTimeout(enforceSquareCells, 100);
+    
+    // Draw symbols and text on canvases
     aspectGrid.querySelectorAll('canvas').forEach(canvas => {
       const ctx = canvas.getContext('2d');
       const symbol = canvas.dataset.symbol;
@@ -2982,6 +3000,39 @@ canvas.addEventListener('mousemove', updateTooltip);
 canvas.addEventListener('mouseleave', () => {
   tooltip.style.display = 'none';
   canvas.style.cursor = 'default';
+});
+
+// Maintain square aspect grid cells on resize
+let resizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    const aspectGrid = document.getElementById('aspect-grid');
+    if (aspectGrid) {
+      const cells = aspectGrid.querySelectorAll('td');
+      cells.forEach(cell => {
+        const width = cell.getBoundingClientRect().width;
+        cell.style.height = `${width}px`;
+        cell.style.minHeight = `${width}px`;
+        cell.style.maxHeight = `${width}px`;
+      });
+    }
+  }, 100);
+});
+
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    const aspectGrid = document.getElementById('aspect-grid');
+    if (aspectGrid) {
+      const cells = aspectGrid.querySelectorAll('td');
+      cells.forEach(cell => {
+        const width = cell.getBoundingClientRect().width;
+        cell.style.height = `${width}px`;
+        cell.style.minHeight = `${width}px`;
+        cell.style.maxHeight = `${width}px`;
+      });
+    }
+  }, 200);
 });
 
 // Initialise on load

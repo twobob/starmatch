@@ -783,11 +783,14 @@ h3 {
 
 .aspect-grid {
   width: 100%;
+  overflow-x: auto; /* Allow horizontal scroll on very small screens */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 .aspect-grid table {
   border-collapse: collapse;
   width: 100%;
+  min-width: 100%; /* Ensure it scales down */
   table-layout: fixed;
 }
 
@@ -811,10 +814,9 @@ h3 {
 
 .aspect-grid td {
   background: rgba(10, 13, 19, 0.6);
-  height: auto;
   padding: 0;
-  aspect-ratio: 1 / 1;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .aspect-grid td.diagonal {
