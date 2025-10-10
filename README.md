@@ -15,7 +15,7 @@ An interactive browser-based astrological calculation engine for precise natal c
    - **Rulership System**: Ancient (traditional), Modern, or Alternative modern
    - **Precession Correction**: Enable for sidereal adjustment (optional)
 3. **Enter Birth Data**:
-   - Date, time (24-hour format recommended)
+   - Date, time (24-hour format)
    - Location: Use search icon for geocoding or enter lat/lon manually
 4. **Calculate**: Click **Calculate Chart**
 5. **Analyze Results**:
