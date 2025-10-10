@@ -12,8 +12,8 @@ window.ENABLE_TESTS = {
   storage: false,               // LocalStorage CRUD operations (disabled - modifies data)
   astronomical: false,          // Astronomy calculations with verified expected values
   zodiac: false,                // Zodiac math and coordinate transformations (when implemented)
-  chartRenderer: false,         // Canvas rendering functions (when implemented)
-  comparison: false             // xProfile and comparison engine (when implemented)
+  chartRenderer: false,         // Canvas rendering functions
+  comparison: false             // xProfile and comparison engine
 };
 
 const TestHarness = {
@@ -44,7 +44,9 @@ const TestHarness = {
     this.allTests.forEach(({ name, testSuite, configKey }) => {
       if (window.ENABLE_TESTS[configKey]) {
         const result = testSuite.runAll();
-        results.push({ name, ...result });
+        if (result) {
+          results.push({ name, ...result });
+        }
       }
     });
     
@@ -56,16 +58,25 @@ const TestHarness = {
     
     results.forEach(r => {
       const status = r.failed === 0 ? '✓' : '✗';
-      console.log(`${status} ${r.name}: ${r.passed}/${r.total} passed`);
+      const color = r.failed === 0 ? 'color: #51cf66' : 'color: #ff6b6b; font-weight: bold';
+      console.log(`%c${status} ${r.name}: ${r.passed}/${r.total} passed`, color);
     });
     
     console.log('');
-    console.log(`TOTAL: ${totalPassed}/${totalTests} passed, ${totalFailed} failed`);
-    
-    if (totalFailed === 0) {
-      console.log('\nAll tests passed.\n');
+    if (totalTests === 0) {
+      console.log('%cNO TESTS REGISTERED', 'color: #ffa94d; font-weight: bold');
+    } else if (totalFailed === 0) {
+      console.log(`%cTOTAL: ${totalPassed}/${totalTests} passed - ALL TESTS PASSED`, 
+        'color: #51cf66; font-weight: bold');
     } else {
-      console.log('\nSome tests failed.\n');
+      console.error(`%cTOTAL: ${totalPassed}/${totalTests} passed, ${totalFailed} FAILED`, 
+        'color: #ff6b6b; font-weight: bold; font-size: 16px');
+    }
+    
+    if (totalTests > 0 && totalFailed === 0) {
+      console.log('\nAll tests passed.\n');
+    } else if (totalFailed > 0) {
+      console.error('\n⚠️  TESTS FAILED - SEE ERRORS ABOVE\n');
     }
     
     return { totalPassed, totalFailed, totalTests, results };

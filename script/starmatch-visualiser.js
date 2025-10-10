@@ -250,7 +250,10 @@ window.astronomyEngineReady = false;
 // Helper Functions
 // ============================================================================
 
-// Note: TidyUpAndFloat removed - no longer needed
+// TidyUpAndFloat - needed by engine.js
+function TidyUpAndFloat(value) {
+  return parseFloat(value) || 0;
+}
 
 // Note: toUTC, getEclipticLongitude, calculateAscendant, calculateMidheaven
 // moved to astronomical-calculations.js module and accessed via AstroCalc.*
@@ -1618,9 +1621,9 @@ function updateCompareButton() {
 function performComparison() {
   if (!currentSubject || !currentTarget) return;
   
-  // Calculate both charts
-  const subjectPos = calculateChartForRecord(currentSubject);
-  const targetPos = calculateChartForRecord(currentTarget);
+  // Calculate both charts using ComparisonEngine module
+  const subjectPos = ComparisonEngine.calculateChartForRecord(currentSubject);
+  const targetPos = ComparisonEngine.calculateChartForRecord(currentTarget);
   
   if (!subjectPos || !targetPos) {
     showToast('Failed to calculate chart positions', 'error');
@@ -1639,167 +1642,15 @@ function performComparison() {
   comparisonResults?.classList.remove('hidden');
 }
 
-function calculateChartForRecord(record) {
-  if (!record.date || !record.time || !record.lat || !record.lon) return null;
-  
-  try {
-    const latitude = parseFloat(record.lat);
-    const longitude = parseFloat(record.lon);
-    
-    // Create UTC date from record
-    const date = AstroCalc.toUTC(record.date, record.time);
-    if (!date) {
-      console.error('Invalid date/time in record');
-      return null;
-    }
-    
-    const positions = {};
-    
-    // Calculate planetary positions using Astronomy Engine
-    for (const planet of PLANET_NAMES) {
-      positions[planet] = AstroCalc.getEclipticLongitude(planet, date) + 30;
-      if (positions[planet] >= 360) {
-        positions[planet] -= 360;
-      }
-    }
-    
-    let ascendant = AstroCalc.calculateAscendant(date, latitude, longitude);
-    let midheaven = AstroCalc.calculateMidheaven(date, longitude);
-    
-    // Apply CURRENT UI engine settings to global variables from engine.js
-    window.orbType = parseInt(orbTypeSelect.value);
-    window.aoIndex = parseInt(aspectOrbSetSelect.value);
-    window.tfIndex = parseInt(rulershipSetSelect.value);
-    window.precessionFlag = precessionCheckbox.checked ? 1 : 0;
-    
-    const birthYear = new Date(record.date).getFullYear();
-    window.nativityYear = birthYear;
-    window.nativity = birthYear;
-    
-    // Apply precession correction to ALL positions if enabled
-    if (window.precessionFlag === 1) {
-      const precessionDegrees = 360 * (birthYear + 130) / 25772;
-      
-      // Apply to all planetary positions
-      for (const planet of PLANET_NAMES) {
-        if (positions[planet] !== undefined) {
-          positions[planet] -= precessionDegrees;
-          if (positions[planet] < 0) {
-            positions[planet] += 360;
-          }
-          if (positions[planet] >= 360) {
-            positions[planet] -= 360;
-          }
-        }
-      }
-      
-      // Apply to ascendant and midheaven
-      ascendant -= precessionDegrees;
-      if (ascendant < 0) ascendant += 360;
-      if (ascendant >= 360) ascendant -= 360;
-      
-      midheaven -= precessionDegrees;
-      if (midheaven < 0) midheaven += 360;
-      if (midheaven >= 360) midheaven -= 360;
-    }
-    
-    // Call engine
-    getThemeValues(
-      positions.Sun,
-      positions.Moon,
-      positions.Mercury,
-      positions.Venus,
-      positions.Mars,
-      positions.Jupiter,
-      positions.Saturn,
-      positions.Uranus,
-      positions.Neptune,
-      positions.Pluto,
-      ascendant,
-      midheaven
-    );
-    
-    return {
-      positions: positions,
-      ascendant: ascendant,
-      midheaven: midheaven,
-      themes: [...theme]
-    };
-  } catch (error) {
-    console.error('Error calculating chart for record:', error);
-    return null;
-  }
-}
-
-function calculateXProfileValue(subjectThemes, targetThemes) {
-  let sumProduct = 0;
-  let sumSubjectSq = 0;
-  let sumTargetSq = 0;
-  
-  for (let i = 0; i < 12; i++) {
-    sumProduct += subjectThemes[i] * targetThemes[i];
-    sumSubjectSq += subjectThemes[i] * subjectThemes[i];
-    sumTargetSq += targetThemes[i] * targetThemes[i];
-  }
-  
-  const denominator = Math.sqrt(sumSubjectSq * sumTargetSq);
-  return denominator !== 0 ? sumProduct / denominator : 0;
-}
-
-function getRelationshipTypeInterpretation(xProfileValue) {
-  const absValue = Math.abs(xProfileValue);
-  
-  if (absValue < 0.2) {
-    return {
-      type: 'Equality/Balance',
-      color: '#51cf66',
-      description: 'Optimal for long-lasting, significant relationships. A balanced blend of similarity and complementarity.',
-      significance: 'High'
-    };
-  } else if (xProfileValue > 0.7) {
-    return {
-      type: 'Strong Similarity',
-      color: '#74c0fc',
-      description: 'Charts have the same shape. Good relationship potential, though may lack the balance for deepest partnerships.',
-      significance: 'Moderate'
-    };
-  } else if (xProfileValue > 0.4) {
-    return {
-      type: 'Moderate Similarity',
-      color: '#69db7c',
-      description: 'Similar energies with some variation. Good compatibility with room for growth.',
-      significance: 'Good'
-    };
-  } else if (xProfileValue < -0.7) {
-    return {
-      type: 'Strong Complementarity',
-      color: '#b85eff',
-      description: 'Charts are inverted relative to each other. Complementary energies, though may lack balance for lasting partnerships.',
-      significance: 'Moderate'
-    };
-  } else if (xProfileValue < -0.4) {
-    return {
-      type: 'Moderate Complementarity',
-      color: '#a78bfa',
-      description: 'Complementary energies provide contrast and growth opportunities.',
-      significance: 'Good'
-    };
-  } else {
-    return {
-      type: 'Mixed Balance',
-      color: '#ffd43b',
-      description: 'A mixture of similar and complementary energies. Approaching ideal balance.',
-      significance: 'Good'
-    };
-  }
-}
+// Note: calculateChartForRecord, calculateXProfileValue, getRelationshipTypeInterpretation
+// moved to comparison-engine.js module and accessed via ComparisonEngine.*
 
 function displayComparisonResults(subjectThemes, targetThemes, subjectPos, targetPos, subjectAsc, targetAsc) {
   if (!comparisonOutput) return;
   
-  // Calculate xProfile value
-  const xProfileValue = calculateXProfileValue(subjectThemes, targetThemes);
-  const relType = getRelationshipTypeInterpretation(xProfileValue);
+  // Calculate xProfile value using ComparisonEngine module
+  const xProfileValue = ComparisonEngine.calculateXProfileValue(subjectThemes, targetThemes);
+  const relType = ComparisonEngine.getRelationshipTypeInterpretation(xProfileValue);
   
   let html = '<div class="comparison-grid">';
   
