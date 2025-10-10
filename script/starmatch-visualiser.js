@@ -1993,24 +1993,35 @@ function displayComparisonResults(subjectThemes, targetThemes, subjectPos, targe
     </div>
   </div>`;
   
-  // Theme comparison - wrapped in its own container
-  html += '<div class="theme-comparison-container">';
-  html += '<h4 style="color: var(--accent); margin-top: 0;">Theme-by-Theme Analysis</h4>';
-  html += '<div style="display: flex; flex-direction: column; gap: 0.6rem;">';
+  // Chart Visualisation - moved before theme comparison
+  html += `<div class="comparison-chart-container">
+    <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15);">
+      <h4 style="color: var(--accent); margin-top: 0; margin-bottom: 0.75rem; font-size: 0.9rem;">Chart Overlay</h4>
+      <canvas id="comparison-chart-canvas" width="400" height="400" style="width: 100%; max-width: 400px; aspect-ratio: 1/1; display: block; margin: 0 auto;"></canvas>
+      <div id="comparison-tooltip" class="chart-tooltip"></div>
+      <div style="margin-top: 0.75rem; font-size: 0.7rem; color: #8fa8ce; display: flex; justify-content: center; gap: 1.5rem;">
+        <div><span style="color: #74c0fc;">●</span> Subject (${currentSubject.name})</div>
+        <div><span style="color: #b85eff;">●</span> Target (${currentTarget.name})</div>
+      </div>
+    </div>
+  </div>`;
   
-  // Find max value for scaling
-  const maxTheme = Math.max(...subjectThemes, ...targetThemes);
+  // Close the first comparison-grid
+  html += '</div>';
   
-  for (let i = 0; i < 12; i++) {
+  // Theme comparison - now after chart, will be placed in bottom grid
+  const themeAnalysisHTML = `<div style="display: flex; flex-direction: column; gap: 0.6rem;">
+  ${SIGN_NAMES.map((signName, i) => {
     const subjectVal = subjectThemes[i];
     const targetVal = targetThemes[i];
+    const maxTheme = Math.max(...subjectThemes, ...targetThemes);
     const subjectPercent = (subjectVal / maxTheme) * 100;
     const targetPercent = (targetVal / maxTheme) * 100;
     const diff = Math.abs(subjectVal - targetVal);
     
-    html += `
+    return `
       <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem;">
-        <div style="min-width: 70px; color: #b8d0f0; text-align: right; font-weight: 500;">${SIGN_NAMES[i]}</div>
+        <div style="min-width: 70px; color: #b8d0f0; text-align: right; font-weight: 500;">${signName}</div>
         
         <!-- Subject bar (left side, blue) -->
         <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 0.3rem;">
@@ -2034,40 +2045,31 @@ function displayComparisonResults(subjectThemes, targetThemes, subjectPos, targe
         </div>
       </div>
     `;
-  }
+  }).join('')}
+  </div>
+  <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(94,197,255,0.15); font-size: 0.7rem; color: #8fa8ce; display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; gap: 1.5rem;">
+      <div><span style="color: #74c0fc;">━━━</span> Subject</div>
+      <div><span style="color: #b85eff;">━━━</span> Target</div>
+    </div>
+    <div style="font-style: italic;">Δ = Difference</div>
+  </div>`;
   
-  html += '</div>';
-  html += '<div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(94,197,255,0.15); font-size: 0.7rem; color: #8fa8ce; display: flex; justify-content: space-between; align-items: center;">';
-  html += '<div style="display: flex; gap: 1.5rem;">';
-  html += '<div><span style="color: #74c0fc;">━━━</span> Subject</div>';
-  html += '<div><span style="color: #b85eff;">━━━</span> Target</div>';
-  html += '</div>';
-  html += '<div style="font-style: italic;">Δ = Difference</div>';
-  html += '</div>';
-  html += '</div>';
-  
-  html += '</div>';
-  
-  // Bottom section with chart Visualisation
-  html += `<div class="comparison-bottom-grid">
-    <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15);">
+  // Bottom section with theme analysis and info text side-by-side (responsive grid)
+  html += `<div class="comparison-grid" style="margin-top: 1rem; gap: 1rem;">
+    <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15); grid-column: 1;">
+      <h4 style="color: var(--accent); margin-top: 0;">Theme-by-Theme Analysis</h4>
+      ${themeAnalysisHTML}
+    </div>
+    <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15); grid-column: 2;">
       <div style="font-size: 0.75rem; color: #8fa8ce; line-height: 1.6;">
-        <strong style="color: #b8d0f0;">Understanding xProfile Values:</strong><br>
-        <span style="color: #74c0fc;">+1.0</span> = Charts have same shape (similarity)<br>
-        <span style="color: #ffd43b;">0.0</span> = Perfect balance (ideal for lasting relationships)<br>
+        <strong style="color: #b8d0f0;">Understanding xProfile Values:</strong><br><br>
+        <span style="color: #74c0fc;">+1.0</span> = Charts have same shape (similarity)<br><br>
+        <span style="color: #ffd43b;">0.0</span> = Perfect balance (ideal for lasting relationships)<br><br>
         <span style="color: #b85eff;">-1.0</span> = Charts are inverted (complementarity)
       </div>
-      <div style="margin-top: 1rem; font-size: 0.7rem; color: #6a7fa0; font-style: italic;">
-        Subject: ${currentSubject.name} • Target: ${currentTarget.name}
-      </div>
-    </div>
-    <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15);">
-      <h4 style="color: var(--accent); margin-top: 0; margin-bottom: 0.75rem; font-size: 0.9rem;">Chart Overlay</h4>
-      <canvas id="comparison-chart-canvas" width="400" height="400" style="width: 100%; max-width: 400px; aspect-ratio: 1/1; display: block; margin: 0 auto;"></canvas>
-      <div id="comparison-tooltip" class="chart-tooltip"></div>
-      <div style="margin-top: 0.75rem; font-size: 0.7rem; color: #8fa8ce; display: flex; justify-content: center; gap: 1.5rem;">
-        <div><span style="color: #74c0fc;">●</span> Subject (${currentSubject.name})</div>
-        <div><span style="color: #b85eff;">●</span> Target (${currentTarget.name})</div>
+      <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(94,197,255,0.15); font-size: 0.7rem; color: #6a7fa0; font-style: italic;">
+        Subject: ${currentSubject.name}<br>Target: ${currentTarget.name}
       </div>
     </div>
   </div>`;
