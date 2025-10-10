@@ -153,31 +153,9 @@ const COMPARISON_HOUSE_CUSP_OPTIONS = {
 
 // ============================================================================
 
-// Helper function to calculate zodiac sign index from ecliptic longitude
-function getSignIndexFromLongitude(longitude) {
-  let normalisedLon = longitude % 360;
-  if (normalisedLon < 0) normalisedLon += 360;
-  
-  // Base sign from longitude (0-29.99° = Aries, 30-59.99° = Taurus, etc.)
-  let baseSign = Math.floor(normalisedLon / 30);
-  
-  // Shift backward by one sign for chart display
-  let signIndex = (baseSign - 1 + 12) % 12;
-  
-  return signIndex;
-}
-
-// Helper function to get sign name and degree from longitude
-function getSignInfo(longitude) {
-  let normalisedLon = longitude % 360;
-  if (normalisedLon < 0) normalisedLon += 360;
-  
-  const signIndex = getSignIndexFromLongitude(longitude);
-  const degree = normalisedLon % 30;
-  const signName = SIGN_NAMES[signIndex];
-  
-  return { signIndex, signName, degree };
-}
+// Use ZodiacUtils module functions
+// Functions now provided by zodiac-utils.js module
+// Maintained as global references for backward compatibility
 
 // Global variables for engine.js compatibility
 var nativity = 0;
@@ -1116,26 +1094,18 @@ function drawAspects(centerX, centerY, radius, positions, ascendant, planetsArra
 }
 
 // ============================================================================
-// Toast Notification System
+// UI Functions - Now provided by UIManager module
 // ============================================================================
 
-function showToast(message, type = 'info', duration = 4000) {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.textContent = message;
-  
-  container.appendChild(toast);
-  
-  setTimeout(() => toast.classList.add('show'), 10);
-  
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
-  }, duration);
-}
+// Use UIManager module functions instead of duplicates
+const showToast = (message, type, duration) => UIManager.showToast(message, type, duration);
+const openRecordsPanel = () => UIManager.openRecordsPanel();
+const closeRecordsPanel = () => UIManager.closeRecordsPanel();
+const renderRecords = () => UIManager.renderRecords();
+const openSaveModal = () => UIManager.openSaveModal();
+const closeSaveModal = () => UIManager.closeSaveModal();
+const openDangerModal = () => UIManager.openDangerModal();
+const closeDangerModal = () => UIManager.closeDangerModal();
 
 // ============================================================================
 // Storage & CRUD Functions
@@ -1162,70 +1132,6 @@ function buildRecordPayload(name) {
   });
 }
 
-function renderRecords() {
-  const records = loadRecords();
-  recordsList.innerHTML = '';
-  if (!records.length) {
-    recordsList.classList.add('empty');
-    recordsList.innerHTML = '<div class="empty-msg">No saved records yet.</div>';
-    return;
-  }
-  recordsList.classList.remove('empty');
-  records.sort((a,b)=> a.name.localeCompare(b.name));
-  records.forEach(rec => {
-    const el = document.createElement('div');
-    el.className = 'record-item';
-    
-    // Create name element
-    const nameEl = document.createElement('div');
-    nameEl.className = 'record-name';
-    nameEl.setAttribute('data-id', rec.id);
-    nameEl.setAttribute('title', 'Click to rename');
-    nameEl.textContent = rec.name;
-    
-    // Create actions row (all buttons together)
-    const actionsRow = document.createElement('div');
-    actionsRow.className = 'record-actions-row';
-    actionsRow.innerHTML = `
-      <button class="pill-btn" data-action="load" data-id="${rec.id}" title="Load & Calculate">Load</button>
-      <button class="pill-btn" data-action="overwrite" data-id="${rec.id}" title="Overwrite this saved record with current inputs/settings">Overwrite</button>
-      <button class="pill-btn danger" data-action="del" data-id="${rec.id}">Del</button>`;
-    
-    // Create metadata row
-    const metaRow = document.createElement('div');
-    metaRow.className = 'record-meta-row';
-    metaRow.innerHTML = `
-      <span class="record-meta">${rec.date || '—'} ${rec.time || ''}</span>
-      <span class="record-meta">${rec.lat || '—'}, ${rec.lon || '—'}</span>`;
-    
-    // Append all elements in correct order
-    el.appendChild(nameEl);
-    el.appendChild(actionsRow);
-    el.appendChild(metaRow);
-    
-    recordsList.appendChild(el);
-  });
-}
-
-function openRecordsPanel() {
-  recordsPanel.classList.remove('hidden');
-  renderRecords();
-}
-
-function closeRecordsPanel() { 
-  recordsPanel.classList.add('hidden'); 
-}
-
-function openSaveModal() {
-  recordNameInput.value = '';
-  saveModal.classList.remove('hidden');
-  recordNameInput.focus();
-}
-
-function closeSaveModal() { 
-  saveModal.classList.add('hidden'); 
-}
-
 function applyRecord(rec, doCalculate=false, includeSettings=true) {
   if (rec.date) birthDate.value = rec.date;
   if (rec.time) birthTime.value = rec.time;
@@ -1242,73 +1148,18 @@ function applyRecord(rec, doCalculate=false, includeSettings=true) {
   }
 }
 
-function openDangerModal() {
-  dangerStage = 0;
-  updateDangerModal();
-  dangerModal.classList.remove('hidden');
-}
-
-function closeDangerModal() {
-  dangerModal.classList.add('hidden');
-  dangerStage = 0;
-}
-
+// Use UIManager for danger modal stage updates
 function updateDangerModal() {
-  if (dangerStage === 0) {
-    dangerModalTitle.textContent = 'Delete ALL Records?';
-    dangerModalText.textContent = 'This will permanently remove every saved record.';
-    dangerStageIndicator.textContent = 'Stage 1 / 2';
-    dangerConfirm.textContent = 'Yes, Continue';
-  } else {
-    dangerModalTitle.textContent = 'Are You Absolutely Sure?';
-    dangerModalText.textContent = 'Last chance! All data will be permanently deleted.';
-    dangerStageIndicator.textContent = 'Stage 2 / 2';
-    dangerConfirm.textContent = 'DELETE EVERYTHING';
-  }
+  UIManager.updateDangerModal(dangerStage);
 }
 
 // ============================================================================
-// Interactive Tooltips
+// Interactive Tooltips - Now provided by UIManager module
 // ============================================================================
 
-function getMousePos(canvas, evt) {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  return {
-    x: (evt.clientX - rect.left) * scaleX,
-    y: (evt.clientY - rect.top) * scaleY
-  };
-}
-
-function distanceToLineSegment(px, py, x1, y1, x2, y2) {
-  const A = px - x1;
-  const B = py - y1;
-  const C = x2 - x1;
-  const D = y2 - y1;
-  
-  const dot = A * C + B * D;
-  const lenSq = C * C + D * D;
-  let param = -1;
-  
-  if (lenSq !== 0) param = dot / lenSq;
-  
-  let xx, yy;
-  
-  if (param < 0) {
-    xx = x1;
-    yy = y1;
-  } else if (param > 1) {
-    xx = x2;
-    yy = y2;
-  } else {
-    xx = x1 + param * C;
-    yy = y1 + param * D;
-  }
-  
-  const dx = px - xx;
-  const dy = py - yy;
-  return Math.sqrt(dx * dx + dy * dy);
+// Tooltip update wrapper
+function updateTooltip(evt) {
+  UIManager.updateTooltip(evt, chartData);
 }
 
 function checkPlanetHover(mouseX, mouseY) {
@@ -1443,73 +1294,6 @@ function checkSignHover(mouseX, mouseY) {
     };
   }
   return null;
-}
-
-function updateTooltip(evt) {
-  if (!chartData.positions || Object.keys(chartData.positions).length === 0) {
-    tooltip.style.display = 'none';
-    return;
-  }
-  
-  const mousePos = getMousePos(canvas, evt);
-  const mouseX = mousePos.x;
-  const mouseY = mousePos.y;
-  
-  // Check in priority order: planets, ascendant, aspects, signs
-  let hoverInfo = checkPlanetHover(mouseX, mouseY);
-  
-  if (!hoverInfo) {
-    hoverInfo = checkMainChartAscendantHover(mouseX, mouseY);
-  }
-  
-  if (!hoverInfo) {
-    hoverInfo = checkAspectHover(mouseX, mouseY);
-  }
-  
-  if (!hoverInfo) {
-    hoverInfo = checkSignHover(mouseX, mouseY);
-  }
-  
-  if (hoverInfo) {
-    let tooltipHTML = '';
-    
-    if (hoverInfo.type === 'planet') {
-      tooltipHTML = `
-        <strong>${hoverInfo.name} IN ${hoverInfo.sign}</strong><br>
-        <span style="font-size: 0.9em;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</span>${hoverInfo.isRuling ? '<br><span style="font-size: 0.85em; color: #ffd700;">⚡ Ruling Planet</span>' : ''}
-      `;
-    } else if (hoverInfo.type === 'ascendant') {
-      tooltipHTML = `
-        <strong>ASCENDANT IN ${hoverInfo.sign}</strong><br>
-        <span style="font-size: 0.9em;">${hoverInfo.position}</span>
-      `;
-    } else if (hoverInfo.type === 'aspect') {
-      tooltipHTML = `
-        <strong>${hoverInfo.aspectType}</strong><br>
-        ${hoverInfo.planet1} (${hoverInfo.p1Quality} ${hoverInfo.p1Polarity} ${hoverInfo.p1Element})<br>
-        ${hoverInfo.planet2} (${hoverInfo.p2Quality} ${hoverInfo.p2Polarity} ${hoverInfo.p2Element})<br>
-        <span style="font-size: 0.9em;">Orb: ${hoverInfo.orb.toFixed(2)}°</span>
-      `;
-    } else if (hoverInfo.type === 'sign') {
-      tooltipHTML = `
-        <strong>${hoverInfo.name}</strong><br>
-        <span style="font-size: 0.9em;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</span>
-      `;
-    }
-    
-    tooltip.innerHTML = tooltipHTML;
-    tooltip.style.display = 'block';
-    
-    // Position tooltip near cursor (fixed positioning uses viewport coordinates)
-    tooltip.style.left = (evt.clientX + 15) + 'px';
-    tooltip.style.top = (evt.clientY + 15) + 'px';
-    
-    // Change cursor to pointer
-    canvas.style.cursor = 'pointer';
-  } else {
-    tooltip.style.display = 'none';
-    canvas.style.cursor = 'default';
-  }
 }
 
 // ============================================================================
