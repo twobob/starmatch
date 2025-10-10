@@ -798,6 +798,7 @@ h3 {
   vertical-align: middle;
   position: relative;
   width: calc(100% / 11);
+  min-width: 0;
 }
 
 .aspect-grid th {
@@ -812,7 +813,8 @@ h3 {
   background: rgba(10, 13, 19, 0.6);
   height: auto;
   padding: 0;
-  aspect-ratio: 1;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
 }
 
 .aspect-grid td.diagonal {
