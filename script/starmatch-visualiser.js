@@ -118,6 +118,41 @@ const ELEMENT_COLOURS = {
   Water: '#a78bfa'    // Purple - emotional, deep
 };
 
+// ============================================================================
+// Chart Configuration
+// ============================================================================
+
+// Main chart dimensions and radii
+const MAIN_CHART_CONFIG = {
+  outerRadius: 280,
+  innerRadius: 220,
+  planetRadius: 160  // innerRadius - 60
+};
+
+// Main chart house cusp display options
+const MAIN_HOUSE_CUSP_OPTIONS = {
+  fontSize: 36,
+  labelFontSize: 12,
+  labelOffset: 20,
+  numeralRadiusFactor: 0.55
+};
+
+// Comparison chart dimensions and radii
+const COMPARISON_CHART_CONFIG = {
+  outerRadius: 180,
+  innerRadius: 140
+};
+
+// Comparison chart house cusp display options
+const COMPARISON_HOUSE_CUSP_OPTIONS = {
+  fontSize: 14,
+  labelFontSize: 10,
+  labelOffset: 15,
+  numeralRadiusFactor: 0.25
+};
+
+// ============================================================================
+
 // Helper function to calculate zodiac sign index from ecliptic longitude
 function getSignIndexFromLongitude(longitude) {
   let normalisedLon = longitude % 360;
@@ -753,12 +788,12 @@ function displayDominants() {
 function drawChartWheel(positions, ascendant, midheaven) {
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
-  const outerRadius = 280;
-  const innerRadius = 220;
+  const outerRadius = MAIN_CHART_CONFIG.outerRadius;
+  const innerRadius = MAIN_CHART_CONFIG.innerRadius;
   
   chartData.centerX = centerX;
   chartData.centerY = centerY;
-  chartData.planetRadius = innerRadius - 60;
+  chartData.planetRadius = MAIN_CHART_CONFIG.planetRadius;
   chartData.innerRadius = innerRadius;
   chartData.outerRadius = outerRadius;
   chartData.aspects = [];
@@ -867,74 +902,69 @@ function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius
   ctx.stroke();
 }
 
-function drawHouseCusps(centerX, centerY, radius, ascendant) {
-  // Roman numerals for houses
-  const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+// Shared function to draw house cusps and numerals on any canvas context
+function drawHouseCuspsOnCanvas(canvasCtx, centerX, centerY, radius, options = {}) {
+  const {
+    fontSize = 24,
+    labelFontSize = 12,
+    labelOffset = 20,
+    numeralRadiusFactor = 0.45
+  } = options;
+  
   const regularNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  
   // Draw 12 house cusp lines at fixed clock positions
-  // These are independent of zodiac rotation
   for (let i = 0; i < 12; i++) {
-    // Fixed positions: start at 12 o'clock (-90°) and go clockwise
-    // 12=top (-90°), 1=(-60°), 2=(-30°), 3=(0°), etc.
     const houseAngle = ((-90 + i * 30) * Math.PI) / 180;
-    
-    // House 9 (at i=9: -90° + 270° = 180°) is at 9 o'clock (-180° when normalized)
     const isAscendant = (i === 9);
     
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(
+    canvasCtx.beginPath();
+    canvasCtx.moveTo(centerX, centerY);
+    canvasCtx.lineTo(
       centerX + Math.cos(houseAngle) * radius,
       centerY + Math.sin(houseAngle) * radius
     );
     
     if (isAscendant) {
-      // Ascendant line - bold and highlighted
-      ctx.strokeStyle = '#ffb85e';
-      ctx.lineWidth = 3;
+      canvasCtx.strokeStyle = '#ffb85e';
+      canvasCtx.lineWidth = 3;
     } else {
-      // Regular house cusps - subtle
-      ctx.strokeStyle = 'rgba(94, 197, 255, 0.3)';
-      ctx.lineWidth = 1;
+      canvasCtx.strokeStyle = 'rgba(94, 197, 255, 0.3)';
+      canvasCtx.lineWidth = 1;
     }
-    ctx.stroke();
+    canvasCtx.stroke();
     
-    // Label only the Ascendant
     if (isAscendant) {
-      ctx.fillStyle = '#ffb95eff';
-      ctx.font = 'bold 12px "Segoe UI"';
-      ctx.textAlign = 'center';
-      const labelX = centerX + Math.cos(houseAngle) * (radius - 20);
-      const labelY = centerY + Math.sin(houseAngle) * (radius - 20);
-      ctx.fillText('AC', labelX, labelY);
+      canvasCtx.fillStyle = '#ffb95eff';
+      canvasCtx.font = `bold ${labelFontSize}px "Segoe UI"`;
+      canvasCtx.textAlign = 'center';
+      const labelX = centerX + Math.cos(houseAngle) * (radius - labelOffset);
+      const labelY = centerY + Math.sin(houseAngle) * (radius - labelOffset);
+      canvasCtx.fillText('AC', labelX, labelY);
     }
   }
   
-  // Draw Roman numerals for houses
-  // House I starts just above (north of) the Ascendant at 9 o'clock
-  // The Ascendant line is at position 9 (270° from 12 o'clock)
-  // House I should be in the segment ABOVE it (between positions 8 and 9)
-  // So we offset by +15° to center it in the segment
+  // Draw numerals for houses
   for (let i = 0; i < 12; i++) {
-    // Start at position 9 (north/above 9 o'clock) and count clockwise
-    // Add 15° to center the numeral in the middle of each house segment
-    const houseNumAngle  = ((-90 + (9 + i) * 30 + 15) * Math.PI) / 180;
-    
-    // Place numerals in the middle of the house area (between center and inner radius)
-    const numeralRadius = radius * 0.45;
+    const houseNumAngle = ((-90 + (9 + i) * 30 + 15) * Math.PI) / 180;
+    const numeralRadius = radius * numeralRadiusFactor;
     const numeralX = centerX + Math.cos(houseNumAngle) * numeralRadius;
     const numeralY = centerY + Math.sin(houseNumAngle) * numeralRadius;
     
-    ctx.save();
-    ctx.translate(numeralX, numeralY);
-    ctx.rotate(houseNumAngle + Math.PI / 2);
-    ctx.fillStyle = 'rgba(94, 197, 255, 0.1)';
-    ctx.font = 'bold 24px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(regularNumbers[i], 0, 0);
-    ctx.restore();
+    canvasCtx.save();
+    canvasCtx.translate(numeralX, numeralY);
+    canvasCtx.rotate(houseNumAngle + Math.PI / 2);
+    canvasCtx.fillStyle = 'rgba(94, 197, 255, 0.05)';
+    canvasCtx.font = `bold ${fontSize}px Georgia, serif`;
+    canvasCtx.textAlign = 'center';
+    canvasCtx.textBaseline = 'middle';
+    canvasCtx.fillText(regularNumbers[i], 0, 0);
+    canvasCtx.restore();
   }
+}
+
+function drawHouseCusps(centerX, centerY, radius, ascendant) {
+  drawHouseCuspsOnCanvas(ctx, centerX, centerY, radius, MAIN_HOUSE_CUSP_OPTIONS);
 }
 
 // Collision detection and stacking helper function
@@ -2045,8 +2075,8 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   const compCtx = compCanvas.getContext('2d');
   const centerX = compCanvas.width / 2;
   const centerY = compCanvas.height / 2;
-  const outerRadius = 180;
-  const innerRadius = 140;
+  const outerRadius = COMPARISON_CHART_CONFIG.outerRadius;
+  const innerRadius = COMPARISON_CHART_CONFIG.innerRadius;
   
   compCtx.clearRect(0, 0, compCanvas.width, compCanvas.height);
   compCtx.fillStyle = '#05070f';
@@ -2124,20 +2154,10 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
     compCtx.fillText(planetSymbols[planet.planetIndex], planet.x, planet.y);
   });
   
-  // Draw ascendant lines
-  // Subject ascendant (blue) - always at 9 o'clock like main chart
-  const subjectAscAngle = ((-180) * Math.PI) / 180;
-  compCtx.beginPath();
-  compCtx.moveTo(centerX, centerY);
-  compCtx.lineTo(
-    centerX + Math.cos(subjectAscAngle) * innerRadius,
-    centerY + Math.sin(subjectAscAngle) * innerRadius
-  );
-  compCtx.strokeStyle = '#74c0fc';
-  compCtx.lineWidth = 2;
-  compCtx.stroke();
+  // Draw house cusps (12 fixed clock positions)
+  drawHouseCuspsOnCanvas(compCtx, centerX, centerY, innerRadius, COMPARISON_HOUSE_CUSP_OPTIONS);
   
-  // Target ascendant (purple) - positioned relative to subject's ascendant using main chart formula
+  // Draw target ascendant line (dashed purple)
   const targetAscAngle = (((targetAsc - subjectAsc + 180) % 360) * Math.PI) / 180;
   compCtx.beginPath();
   compCtx.moveTo(centerX, centerY);
@@ -2147,9 +2167,9 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   );
   compCtx.strokeStyle = '#b85eff';
   compCtx.lineWidth = 2;
-  compCtx.setLineDash([5, 5]); // Dashed line for target
+  compCtx.setLineDash([5, 5]);
   compCtx.stroke();
-  compCtx.setLineDash([]); // Reset to solid
+  compCtx.setLineDash([]);
   
   // Setup tooltips with interactive aspect dimming
   setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetAsc, subjectPlanetsArray, targetPlanetsArray, subjectAspects, targetAspects);
@@ -2176,8 +2196,8 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
   const compChartData = {
     centerX: compCanvas.width / 2,
     centerY: compCanvas.height / 2,
-    outerRadius: 180,
-    innerRadius: 140,
+    outerRadius: COMPARISON_CHART_CONFIG.outerRadius,
+    innerRadius: COMPARISON_CHART_CONFIG.innerRadius,
     subjectPos,
     targetPos,
     subjectAsc,
@@ -2194,8 +2214,8 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     const compCtx = compCanvas.getContext('2d');
     const centerX = compCanvas.width / 2;
     const centerY = compCanvas.height / 2;
-    const outerRadius = 180;
-    const innerRadius = 140;
+    const outerRadius = COMPARISON_CHART_CONFIG.outerRadius;
+    const innerRadius = COMPARISON_CHART_CONFIG.innerRadius;
     const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
     
     compCtx.clearRect(0, 0, compCanvas.width, compCanvas.height);
@@ -2204,6 +2224,9 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     
     // Draw zodiac wheel
     drawZodiacWheelOnCanvas(compCtx, centerX, centerY, outerRadius, innerRadius, subjectAsc, true);
+    
+    // Draw house cusps (always visible, not affected by dimming)
+    drawHouseCuspsOnCanvas(compCtx, centerX, centerY, innerRadius, COMPARISON_HOUSE_CUSP_OPTIONS);
     
     // Determine which aspects to lighten based on hovered planet
     let subjectOpacity = 0.2;
@@ -2286,20 +2309,7 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
       compCtx.globalAlpha = 1;
     });
     
-    // Draw ascendant lines
-    const subjectAscAngle = ((-180) * Math.PI) / 180;
-    compCtx.globalAlpha = subjectPlanetOpacity;
-    compCtx.beginPath();
-    compCtx.moveTo(centerX, centerY);
-    compCtx.lineTo(
-      centerX + Math.cos(subjectAscAngle) * innerRadius,
-      centerY + Math.sin(subjectAscAngle) * innerRadius
-    );
-    compCtx.strokeStyle = '#74c0fc';
-    compCtx.lineWidth = 2;
-    compCtx.stroke();
-    compCtx.globalAlpha = 1;
-    
+    // Draw target ascendant line (dashed purple) with appropriate opacity
     const targetAscAngle = (((targetAsc - subjectAsc + 180) % 360) * Math.PI) / 180;
     compCtx.globalAlpha = targetPlanetOpacity;
     compCtx.beginPath();
