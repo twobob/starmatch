@@ -345,11 +345,11 @@ function calculateChart() {
     
     // Display results
     displayPositions(planetaryPositions, ascendant, midheaven);
-    generateAspectGrid(planetaryPositions);
-    displayThemes();
-    displayAspects();
-    displayTraditionalFactors();
-    displayDominants();
+    AspectGrid.generateAspectGrid(planetaryPositions);
+    SpectrumDisplays.displayThemes(theme);
+    SpectrumDisplays.displayAspects(numAspects);
+    SpectrumDisplays.displayTraditionalFactors(numTradFactors);
+    SpectrumDisplays.displayDominants(tfDominant, theme);
     drawChartWheel(planetaryPositions, ascendant, midheaven);
     
     showToast('Chart calculated successfully', 'success', 2000);
@@ -402,282 +402,11 @@ function displayPositions(positions, ascendant, midheaven) {
   }
 }
 
-function generateAspectGrid(positions) {
-  const aspectGrid = document.getElementById('aspect-grid');
-  if (!aspectGrid) return;
-  
-  // Planet symbols
-  const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
-  
-  // Planet speeds (degrees per day, approximate) - used to determine applying/separating
-  const planetSpeeds = [1.0, 13.2, 1.6, 1.2, 0.5, 0.08, 0.03, 0.01, 0.006, 0.004];
-  
-  // Aspect symbols and colors
-  const aspectSymbols = {
-    'Conjunction': { symbol: '☌', color: '#ff6b6b' },
-    'Semi-sextile': { symbol: '⚺', color: '#51cf66' },
-    'Semi-square': { symbol: '∠', color: '#ffd43b' },
-    'Sextile': { symbol: '⚹', color: '#74c0fc' },
-    'Square': { symbol: '□', color: '#ff6b6b' },
-    'Trine': { symbol: '△', color: '#51cf66' },
-    'Opposition': { symbol: '☍', color: '#a78bfa' }
-  };
-  
-  // Calculate all aspects between planets
-  const planetLongitudes = Object.entries(positions).map(([name, lon]) => ({
-    name,
-    longitude: lon,
-    index: PLANET_NAMES.indexOf(name)
-  })).filter(p => p.index !== -1).sort((a, b) => a.index - b.index);
-  
-  const aspectAngles = [0, 180, 120, 90, 60, 45, 30];
-  const aspectMap = {};
-  
-  // Build aspect map
-  planetLongitudes.forEach((p1, i) => {
-    planetLongitudes.forEach((p2, j) => {
-      if (i >= j) return; // Only calculate each pair once, skip diagonal
-      
-      let diff = Math.abs(p1.longitude - p2.longitude);
-      if (diff > 180) diff = 360 - diff;
-      
-      for (const aspectAngle of aspectAngles) {
-        const orb = orbType === 0 ? ao[aoIndex][aspectAngles.indexOf(aspectAngle)] : 8;
-        if (Math.abs(diff - aspectAngle) <= orb) {
-          const aspectTypes = {
-            0: 'Conjunction',
-            30: 'Semi-sextile',
-            45: 'Semi-square',
-            60: 'Sextile',
-            90: 'Square',
-            120: 'Trine',
-            180: 'Opposition'
-          };
-          
-          // Calculate orb - this gives us the signed offset from exactness
-          // Positive means past the exact angle, negative means before it
-          const orbDifference = diff - aspectAngle;
-          const orbValue = Math.abs(orbDifference);
-          
-          // Determine if applying or separating based on planetary motion
-          const fasterPlanetIndex = planetSpeeds[p1.index] > planetSpeeds[p2.index] ? i : j;
-          const slowerPlanetIndex = fasterPlanetIndex === i ? j : i;
-          const fasterLon = planetLongitudes[fasterPlanetIndex].longitude;
-          const slowerLon = planetLongitudes[slowerPlanetIndex].longitude;
-          
-          // Calculate if faster planet is ahead or behind slower planet
-          let separation = (fasterLon - slowerLon + 360) % 360;
-          const isApplying = separation > 180; // Faster planet is behind, approaching
-          
-          const key = `${i}-${j}`;
-          aspectMap[key] = {
-            type: aspectTypes[aspectAngle],
-            orb: orbValue,
-            signedOrb: orbDifference, // Keep the actual signed difference from exact angle
-            applying: isApplying,
-            angle: aspectAngle
-          };
-          break;
-        }
-      }
-    });
-  });
-  
-  // Generate HTML table
-  let html = '<table><thead><tr><th></th>';
-  planetLongitudes.forEach(p => {
-    html += `<th>${planetSymbols[p.index]}</th>`;
-  });
-  html += '</tr></thead><tbody>';
-  
-  planetLongitudes.forEach((p1, i) => {
-    html += `<tr><th>${planetSymbols[p1.index]}</th>`;
-    planetLongitudes.forEach((p2, j) => {
-      if (i === j) {
-        // Diagonal - empty
-        html += '<td class="diagonal"></td>';
-      } else {
-        const key = i < j ? `${i}-${j}` : `${j}-${i}`;
-        const aspect = aspectMap[key];
-        
-        if (aspect) {
-          const aspectInfo = aspectSymbols[aspect.type] || { symbol: '?', color: '#888' };
-          const letter = aspect.applying ? 'A' : 'S';
-          html += `<td class="has-aspect" data-aspect="${aspect.type}" data-orb="${aspect.signedOrb.toFixed(0)}" data-letter="${letter}" title="${aspect.type} (${aspect.applying ? 'Applying' : 'Separating'} ${aspect.orb.toFixed(2)}°)"><canvas width="60" height="60" data-symbol="${aspectInfo.symbol}" data-color="${aspectInfo.color}" data-orb="${aspect.signedOrb.toFixed(0)}" data-letter="${letter}"></canvas></td>`;
-        } else {
-          html += '<td></td>';
-        }
-      }
-    });
-    html += '</tr>';
-  });
-  
-  html += '</tbody></table>';
-  aspectGrid.innerHTML = html;
-  
-  // Force square cells by setting explicit heights based on width
-  const enforceSquareCells = () => {
-    const cells = aspectGrid.querySelectorAll('td');
-    cells.forEach(cell => {
-      const width = cell.getBoundingClientRect().width;
-      cell.style.height = `${width}px`;
-      cell.style.minHeight = `${width}px`;
-      cell.style.maxHeight = `${width}px`;
-    });
-  };
-  
-  // Apply immediately
-  enforceSquareCells();
-  
-  // And after DOM settles
-  requestAnimationFrame(() => {
-    enforceSquareCells();
-    setTimeout(enforceSquareCells, 100);
-    
-    // Draw symbols and text on canvases
-    aspectGrid.querySelectorAll('canvas').forEach(canvas => {
-      const ctx = canvas.getContext('2d');
-      const symbol = canvas.dataset.symbol;
-      const color = canvas.dataset.color;
-      const orb = canvas.dataset.orb;
-      const letter = canvas.dataset.letter;
-      
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw aspect symbol on left side (lower-left area)
-      ctx.fillStyle = color;
-      ctx.font = 'bold 24px Arial';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(symbol, 8, canvas.height - 8);
-      
-      // Draw orb number on right side (top-right)
-      ctx.fillStyle = '#e2eeff';
-      ctx.font = 'bold 22px Arial';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'top';
-      ctx.fillText(orb, canvas.width - 4, 4);
-      
-      // Draw letter on right side (bottom-right)
-      ctx.font = 'bold 20px Arial';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(letter, canvas.width - 4, canvas.height - 4);
-    });
-  });
-}
+// Aspect Grid generation moved to aspect-grid.js module
+// Now accessed via AspectGrid.generateAspectGrid(positions)
 
-function displayThemes() {
-  themeBars.innerHTML = '';
-  const maxTheme = Math.max(...theme);
-
-  SIGN_NAMES.forEach((sign, index) => {
-    const value = theme[index];
-    const percentage = maxTheme > 0 ? (value / maxTheme) * 100 : 0;
-
-    const bar = document.createElement('div');
-    bar.className = 'theme-bar';
-    bar.innerHTML = `
-      <span class="theme-label">${sign}</span>
-      <div class="bar-wrapper">
-        <div class="bar-fill" style="width: ${percentage}%"></div>
-        <div class="bar-value">${value.toFixed(2)}</div>
-      </div>
-    `;
-    themeBars.appendChild(bar);
-  });
-}
-
-function displayAspects() {
-  aspectCounts.innerHTML = '';
-
-  ASPECT_NAMES.forEach((name, index) => {
-    const count = numAspects[index];
-    const item = document.createElement('div');
-    item.className = 'info-item';
-    item.innerHTML = `
-      <span class="info-label">${name}</span>
-      <span class="info-value">${count}</span>
-    `;
-    aspectCounts.appendChild(item);
-  });
-}
-
-function displayTraditionalFactors() {
-  tradFactors.innerHTML = '';
-
-  const labels = [
-    'Positive Signs',
-    'Negative Signs',
-    'Fire',
-    'Earth',
-    'Air',
-    'Water',
-    'Cardinal',
-    'Fixed',
-    'Mutable'
-  ];
-
-  labels.forEach((label, index) => {
-    const value = numTradFactors[index];
-    const item = document.createElement('div');
-    item.className = 'info-item';
-    item.innerHTML = `
-      <span class="info-label">${label}</span>
-      <span class="info-value">${value}</span>
-    `;
-    tradFactors.appendChild(item);
-  });
-}
-
-function displayDominants() {
-  dominantInfo.innerHTML = '';
-
-  const polarityItem = document.createElement('div');
-  polarityItem.className = 'info-item';
-  polarityItem.innerHTML = `
-    <span class="info-label">Dominant Polarity</span>
-    <span class="info-value dominant">${tfDominant[0] === 1 ? 'Positive' : 'Negative'}</span>
-  `;
-  dominantInfo.appendChild(polarityItem);
-
-  const elementIndex = tfDominant[1] - 2;
-  const elementName = elementIndex >= 0 && elementIndex < 4 ? ELEMENT_NAMES[elementIndex] : 'None';
-  const elementItem = document.createElement('div');
-  elementItem.className = 'info-item';
-  elementItem.innerHTML = `
-    <span class="info-label">Dominant Element</span>
-    <span class="info-value dominant">${elementName}</span>
-  `;
-  dominantInfo.appendChild(elementItem);
-
-  const qualityIndex = tfDominant[2] - 6;
-  const qualityName = qualityIndex >= 0 && qualityIndex < 3 ? QUALITY_NAMES[qualityIndex] : 'None';
-  const qualityItem = document.createElement('div');
-  qualityItem.className = 'info-item';
-  qualityItem.innerHTML = `
-    <span class="info-label">Dominant Quality</span>
-    <span class="info-value dominant">${qualityName}</span>
-  `;
-  dominantInfo.appendChild(qualityItem);
-
-  let maxThemeIndex = 0;
-  let maxThemeValue = theme[0];
-  for (let i = 1; i < 12; i++) {
-    if (theme[i] > maxThemeValue) {
-      maxThemeValue = theme[i];
-      maxThemeIndex = i;
-    }
-  }
-
-  const themeItem = document.createElement('div');
-  themeItem.className = 'info-item';
-  themeItem.innerHTML = `
-    <span class="info-label">Strongest Theme</span>
-    <span class="info-value dominant">${SIGN_NAMES[maxThemeIndex]} (${maxThemeValue.toFixed(2)})</span>
-  `;
-  dominantInfo.appendChild(themeItem);
-}
+// Spectrum display functions moved to spectrum-displays.js module
+// Now accessed via SpectrumDisplays.displayThemes(), displayAspects(), etc.
 
 
 // Chart Wheel Visualisation 
@@ -1100,7 +829,7 @@ function drawAspects(centerX, centerY, radius, positions, ascendant, planetsArra
 }
 
 
-// UI Functions - Now provided by UIManager module
+// UI Functions - Now provided by UIManager module - called like UIManager.*
 
 
 // Use UIManager module functions instead of duplicates
@@ -1114,7 +843,7 @@ const openDangerModal = () => UIManager.openDangerModal();
 const closeDangerModal = () => UIManager.closeDangerModal();
 
 
-// Storage & CRUD Functions
+// Storage & CRUD Functions, called like StorageManager.*
 
 
 // Use StorageManager module functions instead of duplicates
@@ -1160,7 +889,7 @@ function updateDangerModal() {
 }
 
 
-// Interactive Tooltips - Now provided by UIManager module
+// Interactive Tooltips - Now provided by UIManager module, called like UIManager.*
 
 
 // Tooltip update wrapper - delegates to UIManager
@@ -1274,6 +1003,9 @@ function updateCompareButton() {
   }
 }
 
+// Note: calculateChartForRecord, calculateXProfileValue, getRelationshipTypeInterpretation
+// moved to comparison-engine.js module and accessed via ComparisonEngine.*
+
 function performComparison() {
   if (!currentSubject || !currentTarget) return;
   
@@ -1297,9 +1029,6 @@ function performComparison() {
   
   comparisonResults?.classList.remove('hidden');
 }
-
-// Note: calculateChartForRecord, calculateXProfileValue, getRelationshipTypeInterpretation
-// moved to comparison-engine.js module and accessed via ComparisonEngine.*
 
 function displayComparisonResults(subjectThemes, targetThemes, subjectPos, targetPos, subjectAsc, targetAsc) {
   if (!comparisonOutput) return;
