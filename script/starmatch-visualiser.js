@@ -430,7 +430,8 @@ function drawChartWheel(positions, ascendant, midheaven) {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ChartRenderer.drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius, ascendant, false);
-  ChartRenderer.drawHouseCuspsOnCanvas(ctx, centerX, centerY, innerRadius, MAIN_HOUSE_CUSP_OPTIONS);
+  ChartRenderer.drawHouseCuspsOnCanvas(ctx, centerX, centerY, innerRadius, ascendant, MAIN_HOUSE_CUSP_OPTIONS);
+  ChartRenderer.drawMidheavenIndicator(ctx, centerX, centerY, outerRadius, ascendant, midheaven);
   const planetsArray = drawPlanets(centerX, centerY, innerRadius - 30, positions, ascendant);
   drawAspects(centerX, centerY, innerRadius - 30, positions, ascendant, planetsArray);
 }

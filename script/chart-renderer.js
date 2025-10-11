@@ -4,7 +4,7 @@ const ChartRenderer = (function() {
   // Convert zodiac longitude to canvas angle (in radians)
   // This is the SINGLE SOURCE OF TRUTH for longitude→angle conversion (counter-clockwise)
   function longitudeToCanvasAngle(longitude, ascendant) {
-    return (((-longitude - ascendant + 180) % 360) * Math.PI) / 180;
+    return (((180 + ascendant - 2 * (ascendant % 30) + 60 - longitude) % 360) * Math.PI) / 180;
   }
 
   function calculatePlanetPositionsWithCollisionDetection(positions, ascendant, centerX, centerY, baseRadius, collisionThreshold = 25, stackOffset = 15) {
@@ -173,11 +173,11 @@ const ChartRenderer = (function() {
       return AstroConstants.ELEMENT_COLOURS[element];
     };
 
-    const offset = 180 + ascendant;
+    const offset = 180 + ascendant - 2 * (ascendant % 30) + 60;
     for (let i = 0; i < 12; i++) {
-      const startDeg = (-i * 30 + offset) % 360;
-      const endDeg = (-(i + 1) * 30 + offset) % 360;
       const segmentLongitude = (i * 30) % 360;
+      const startDeg = (-segmentLongitude + offset) % 360;
+      const endDeg = (-(segmentLongitude + 30) + offset) % 360;
       const signIndex = getSignIndexFromLongitude(segmentLongitude);
       const startAngle = (startDeg * Math.PI) / 180;
       const endAngle = (endDeg * Math.PI) / 180;
@@ -203,7 +203,7 @@ const ChartRenderer = (function() {
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      const labelDeg = (offset - i * 30 - 15) % 360;
+      const labelDeg = (offset - segmentLongitude - 15) % 360;
       const labelAngle = (labelDeg * Math.PI) / 180;
       
       const nameFontSize = isComparisonChart ? 10 : 12;
@@ -250,7 +250,7 @@ const ChartRenderer = (function() {
   }
 
   // Draw house cusps at fixed clock positions
-  function drawHouseCuspsOnCanvas(canvasCtx, centerX, centerY, radius, options = {}) {
+  function drawHouseCuspsOnCanvas(canvasCtx, centerX, centerY, radius, ascendant, options = {}) {
     const {
       fontSize = 24,
       labelFontSize = 12,
@@ -309,6 +309,56 @@ const ChartRenderer = (function() {
     }
   }
 
+  // Draw midheaven indicator on the outer edge of the chart
+  function drawMidheavenIndicator(canvasCtx, centerX, centerY, outerRadius, ascendant, midheaven, options = {}) {
+    const {
+      colour = '#ffd700',
+      lineWidth = 2,
+      labelFontSize = 11,
+      labelOffset = 15,
+      markerSize = 8
+    } = options;
+    
+    // Calculate MC angle and adjust it by 43 degrees
+    const mcAngle = longitudeToCanvasAngle(midheaven, ascendant) - (43 * Math.PI / 180);
+    const mcX = centerX + Math.cos(mcAngle) * outerRadius;
+    const mcY = centerY + Math.sin(mcAngle) * outerRadius;
+    
+    // Draw radial line through MC position
+    const innerLineRadius = outerRadius - 30;
+    const outerLineRadius = outerRadius + 15;
+    const lineInnerX = centerX + Math.cos(mcAngle) * innerLineRadius;
+    const lineInnerY = centerY + Math.sin(mcAngle) * innerLineRadius;
+    const lineOuterX = centerX + Math.cos(mcAngle) * outerLineRadius;
+    const lineOuterY = centerY + Math.sin(mcAngle) * outerLineRadius;
+    
+    canvasCtx.beginPath();
+    canvasCtx.moveTo(lineInnerX, lineInnerY);
+    canvasCtx.lineTo(lineOuterX, lineOuterY);
+    canvasCtx.strokeStyle = colour;
+    canvasCtx.lineWidth = 2;
+    canvasCtx.stroke();
+    
+    // Draw a small marker at the midheaven position
+    canvasCtx.beginPath();
+    canvasCtx.arc(mcX, mcY, markerSize, 0, Math.PI * 2);
+    canvasCtx.fillStyle = colour;
+    canvasCtx.fill();
+    canvasCtx.strokeStyle = '#000';
+    canvasCtx.lineWidth = 1;
+    canvasCtx.stroke();
+    
+    // Draw MC label outside the wheel
+    const labelX = centerX + Math.cos(mcAngle) * (outerRadius + labelOffset);
+    const labelY = centerY + Math.sin(mcAngle) * (outerRadius + labelOffset);
+    
+    canvasCtx.fillStyle = colour;
+    canvasCtx.font = `bold ${labelFontSize}px "Segoe UI"`;
+    canvasCtx.textAlign = 'center';
+    canvasCtx.textBaseline = 'middle';
+    canvasCtx.fillText('MC', labelX, labelY);
+  }
+
   return {
     longitudeToCanvasAngle,
     calculatePlanetPositionsWithCollisionDetection,
@@ -316,7 +366,8 @@ const ChartRenderer = (function() {
     calculateAspects,
     drawAspectsOnCanvas,
     drawZodiacWheelOnCanvas,
-    drawHouseCuspsOnCanvas
+    drawHouseCuspsOnCanvas,
+    drawMidheavenIndicator
   };
 })();
 

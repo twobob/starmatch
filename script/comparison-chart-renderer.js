@@ -42,7 +42,7 @@ const ComparisonChartRenderer = (function() {
     drawDualPersonPlanets(compCtx, subjectPlanetsArray, targetPlanetsArray);
     
     // Draw house cusps
-    ChartRenderer.drawHouseCuspsOnCanvas(compCtx, centerX, centerY, innerRadius, comparisonHouseCuspOptions);
+    ChartRenderer.drawHouseCuspsOnCanvas(compCtx, centerX, centerY, innerRadius, subjectAsc, comparisonHouseCuspOptions);
     
     // Draw target ascendant line (dashed purple)
     drawTargetAscendantLine(compCtx, centerX, centerY, innerRadius, subjectAsc, targetAsc);
@@ -187,7 +187,7 @@ const ComparisonChartRenderer = (function() {
       ChartRenderer.drawZodiacWheelOnCanvas(compCtx, centerX, centerY, outerRadius, innerRadius, subjectAsc, true);
       
       // Draw house cusps (always visible, not affected by dimming)
-      ChartRenderer.drawHouseCuspsOnCanvas(compCtx, centerX, centerY, innerRadius, comparisonHouseCuspOptions);
+      ChartRenderer.drawHouseCuspsOnCanvas(compCtx, centerX, centerY, innerRadius, subjectAsc, comparisonHouseCuspOptions);
       
       // Determine which aspects to lighten based on hovered planet
       let subjectOpacity = 0.2;
