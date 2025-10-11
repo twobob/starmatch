@@ -12,7 +12,7 @@ window.ENABLE_TESTS = {
   storage: false,               // LocalStorage CRUD operations (disabled - modifies data)
   astronomical: false,          // Astronomy calculations with verified expected values
   zodiacUtils: false,           // Zodiac math and coordinate transformations
-  chartRenderer: false,         // Canvas rendering functions
+  chartRenderer: true,          // Canvas rendering functions
   uiManager: false,             // UI management (toasts, modals, tooltips)
   comparison: false             // xProfile and comparison engine
 };

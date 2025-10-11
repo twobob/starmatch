@@ -659,20 +659,20 @@ var orbValue = 0;
 			{
 				for ( n = 0; n < 7; n++ )
 				{
-					if ( isAspect ( planet[5], planet[ruler], a[n], ao[aoIndex][n] ))	// signRuler/Mars aspect
-						theme[11] += ps[5]*ps[ruler]*aspectStrength ( planet[6], planet[ruler], a[n], ao[aoIndex][n], af[n] );
+					if ( isAspect ( planet[5], planet[ruler], a[n], ao[aoIndex][n] ))	// Jupiter/Neptune aspect
+						theme[11] += ps[5]*ps[ruler]*aspectStrength ( planet[5], planet[ruler], a[n], ao[aoIndex][n], af[n] );
 				}
 			}
 			else
 			{
 				orbValue = 0.5*(po[poIndex][5]+po[poIndex][ruler]);
-				if ( isAspect ( planet[5], planet[ruler], a[n], orbValue ))	// signRuler/Mars aspect
+				if ( isAspect ( planet[5], planet[ruler], a[n], orbValue ))	// Jupiter/Neptune aspect
 					theme[11] += ps[5]*ps[ruler]*aspectStrength ( planet[5], planet[ruler], a[n], orbValue, af[n] );
 			}
 
 		}
 		else
-			calculateThemeValue ( 12, ruler, 1 );	// just use ancient ruler Saturn
+			calculateThemeValue ( 12, ruler, 1 );	// just use ancient ruler Jupiter
 		// Is the chart emphasis on water, mutable?
 		if ( tfDominant[1] == 3 )		// water dominant?
 			theme[11] += 1;

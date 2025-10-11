@@ -1,6 +1,12 @@
 const ChartRenderer = (function() {
   'use strict';
 
+  // Convert zodiac longitude to canvas angle (in radians)
+  // This is the SINGLE SOURCE OF TRUTH for longitude→angle conversion (counter-clockwise)
+  function longitudeToCanvasAngle(longitude, ascendant) {
+    return (((-longitude - ascendant + 180) % 360) * Math.PI) / 180;
+  }
+
   function calculatePlanetPositionsWithCollisionDetection(positions, ascendant, centerX, centerY, baseRadius, collisionThreshold = 25, stackOffset = 15) {
     const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
     const planetsArray = [];
@@ -8,7 +14,7 @@ const ChartRenderer = (function() {
     Object.entries(positions).forEach(([name, longitude]) => {
       if (longitude === undefined || longitude === null || isNaN(longitude)) return;
       
-      const angle = (((longitude - ascendant + 180) % 360) * Math.PI) / 180;
+      const angle = longitudeToCanvasAngle(longitude, ascendant);
       const planetIndex = AstroConstants.PLANET_NAMES.indexOf(name);
       if (planetIndex === -1) return;
       
@@ -98,7 +104,7 @@ const ChartRenderer = (function() {
               x1 = planet1Data.x;
               y1 = planet1Data.y;
             } else {
-              const angle1 = (((p1.longitude - ascendant + 180) % 360) * Math.PI) / 180;
+              const angle1 = longitudeToCanvasAngle(p1.longitude, ascendant);
               x1 = centerX + Math.cos(angle1) * radius;
               y1 = centerY + Math.sin(angle1) * radius;
             }
@@ -107,7 +113,7 @@ const ChartRenderer = (function() {
               x2 = planet2Data.x;
               y2 = planet2Data.y;
             } else {
-              const angle2 = (((p2.longitude - ascendant + 180) % 360) * Math.PI) / 180;
+              const angle2 = longitudeToCanvasAngle(p2.longitude, ascendant);
               x2 = centerX + Math.cos(angle2) * radius;
               y2 = centerY + Math.sin(angle2) * radius;
             }
@@ -160,11 +166,154 @@ const ChartRenderer = (function() {
     });
   }
 
+  // Draw zodiac wheel with signs (counter-clockwise)
+  function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius, ascendant, isComparisonChart = false) {
+    const getSignColour = (signIndex) => {
+      const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
+      return AstroConstants.ELEMENT_COLOURS[element];
+    };
+
+    const offset = 180 + ascendant;
+    for (let i = 0; i < 12; i++) {
+      const startDeg = (-i * 30 + offset) % 360;
+      const endDeg = (-(i + 1) * 30 + offset) % 360;
+      const segmentLongitude = (i * 30) % 360;
+      const signIndex = getSignIndexFromLongitude(segmentLongitude);
+      const startAngle = (startDeg * Math.PI) / 180;
+      const endAngle = (endDeg * Math.PI) / 180;
+
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle, true);
+      ctx.closePath();
+      const signColour = getSignColour(signIndex);
+      ctx.fillStyle = signColour + '20';
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.moveTo(
+        centerX + Math.cos(startAngle) * innerRadius,
+        centerY + Math.sin(startAngle) * innerRadius
+      );
+      ctx.lineTo(
+        centerX + Math.cos(startAngle) * outerRadius,
+        centerY + Math.sin(startAngle) * outerRadius
+      );
+      ctx.strokeStyle = signColour + '80';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      const labelDeg = (offset - i * 30 - 15) % 360;
+      const labelAngle = (labelDeg * Math.PI) / 180;
+      
+      const nameFontSize = isComparisonChart ? 10 : 12;
+      const symbolFontSize = isComparisonChart ? 20 : 24;
+      const nameOffset = isComparisonChart ? 10 : 15;
+      const symbolOffset = isComparisonChart ? 12 : 24;
+      
+      const nameRadius = outerRadius - nameOffset;
+      const nameX = centerX + Math.cos(labelAngle) * nameRadius;
+      const nameY = centerY + Math.sin(labelAngle) * nameRadius;
+
+      ctx.save();
+      ctx.translate(nameX, nameY);
+      ctx.rotate(labelAngle + Math.PI / 2);
+      ctx.fillStyle = getSignColour(signIndex);
+      ctx.font = `bold ${nameFontSize}px "Segoe UI"`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(AstroConstants.SIGN_NAMES[signIndex], 0, 0);
+      ctx.restore();
+      
+      const symbolRadius = innerRadius + symbolOffset;
+      const symbolX = centerX + Math.cos(labelAngle) * symbolRadius;
+      const symbolY = centerY + Math.sin(labelAngle) * symbolRadius;
+
+      ctx.save();
+      ctx.translate(symbolX, symbolY);
+      ctx.rotate(labelAngle + Math.PI / 2);
+      ctx.fillStyle = getSignColour(signIndex);
+      ctx.font = `bold ${symbolFontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(AstroConstants.SIGN_SYMBOLS[signIndex], 0, 0);
+      ctx.restore();
+    }
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(5, 7, 15, 0.9)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(94, 197, 255, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // Draw house cusps at fixed clock positions
+  function drawHouseCuspsOnCanvas(canvasCtx, centerX, centerY, radius, options = {}) {
+    const {
+      fontSize = 24,
+      labelFontSize = 12,
+      labelOffset = 20,
+      numeralRadiusFactor = 0.45
+    } = options;
+    
+    const regularNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    
+    for (let i = 0; i < 12; i++) {
+      const angleDeg = -90 - i * 30;
+      const angle = (angleDeg * Math.PI) / 180;
+      const cuspX = centerX + Math.cos(angle) * radius;
+      const cuspY = centerY + Math.sin(angle) * radius;
+
+      canvasCtx.beginPath();
+      canvasCtx.moveTo(centerX, centerY);
+      canvasCtx.lineTo(cuspX, cuspY);
+      canvasCtx.strokeStyle = 'rgba(94, 197, 255, 0.3)';
+      canvasCtx.lineWidth = 1;
+      canvasCtx.stroke();
+
+      if (i === 0) {
+        const labelX = centerX + Math.cos(angle) * (radius + labelOffset);
+        const labelY = centerY + Math.sin(angle) * (radius + labelOffset);
+        canvasCtx.save();
+        canvasCtx.translate(labelX, labelY);
+        canvasCtx.rotate(angle + Math.PI / 2);
+        canvasCtx.fillStyle = 'rgba(94, 197, 255, 1)';
+        canvasCtx.font = `bold ${labelFontSize}px Arial`;
+        canvasCtx.textAlign = 'center';
+        canvasCtx.textBaseline = 'middle';
+        canvasCtx.fillText('ASC', 0, 0);
+        canvasCtx.restore();
+      }
+    }
+    
+    for (let i = 0; i < 12; i++) {
+      const houseNumAngle = ((-90 - (3 + i) * 30 - 15) * Math.PI) / 180;
+      const numeralRadius = radius * numeralRadiusFactor;
+      const numeralX = centerX + Math.cos(houseNumAngle) * numeralRadius;
+      const numeralY = centerY + Math.sin(houseNumAngle) * numeralRadius;
+      
+      canvasCtx.save();
+      canvasCtx.translate(numeralX, numeralY);
+      canvasCtx.rotate(houseNumAngle + Math.PI / 2);
+      canvasCtx.fillStyle = 'rgba(94, 197, 255, 0.05)';
+      canvasCtx.font = `bold ${fontSize}px Georgia, serif`;
+      canvasCtx.textAlign = 'center';
+      canvasCtx.textBaseline = 'middle';
+      canvasCtx.fillText(regularNumbers[i], 0, 0);
+      canvasCtx.restore();
+    }
+  }
+
   return {
+    longitudeToCanvasAngle,
     calculatePlanetPositionsWithCollisionDetection,
     getPlanetColourByLongitude,
     calculateAspects,
-    drawAspectsOnCanvas
+    drawAspectsOnCanvas,
+    drawZodiacWheelOnCanvas,
+    drawHouseCuspsOnCanvas
   };
 })();
 
