@@ -7,14 +7,14 @@
 // Individual test suites can be enabled/disabled independently
 // Useful for debugging specific modules without running entire test suite
 window.ENABLE_TESTS = {
-  all: false,                   // Master switch - disables everything if false
-  constants: false,             // Configuration constants validation
-  storage: false,               // LocalStorage CRUD operations (disabled - modifies data)
-  astronomical: false,          // Astronomy calculations with verified expected values
-  zodiacUtils: false,           // Zodiac math and coordinate transformations
-  chartRenderer: true,          // Canvas rendering functions
-  uiManager: false,             // UI management (toasts, modals, tooltips)
-  comparison: false             // xProfile and comparison engine
+  all: false,                  // Master switch - disables everything if false
+  constants: true,             // Configuration constants validation
+  storage: false,              // LocalStorage CRUD operations
+  astronomical: true,          // Astronomy calculations with verified expected values
+  zodiacUtils: true,           // Zodiac math and coordinate transformations
+  chartRenderer: true,         // Canvas rendering functions
+  uiManager: true,             // UI management (toasts, modals, tooltips)
+  comparison: true             // xProfile and comparison engine
 };
 
 const TestHarness = {

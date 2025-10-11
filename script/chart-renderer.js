@@ -260,31 +260,34 @@ const ChartRenderer = (function() {
     
     const regularNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     
+    // Draw 12 house cusp lines at fixed clock positions
     for (let i = 0; i < 12; i++) {
-      const angleDeg = -90 - i * 30;
-      const angle = (angleDeg * Math.PI) / 180;
-      const cuspX = centerX + Math.cos(angle) * radius;
-      const cuspY = centerY + Math.sin(angle) * radius;
+      const houseAngle = ((-90 + i * 30) * Math.PI) / 180;
+      const isAscendant = (i === 9);
 
       canvasCtx.beginPath();
       canvasCtx.moveTo(centerX, centerY);
-      canvasCtx.lineTo(cuspX, cuspY);
-      canvasCtx.strokeStyle = 'rgba(94, 197, 255, 0.3)';
-      canvasCtx.lineWidth = 1;
+      canvasCtx.lineTo(
+        centerX + Math.cos(houseAngle) * radius,
+        centerY + Math.sin(houseAngle) * radius
+      );
+      
+      if (isAscendant) {
+        canvasCtx.strokeStyle = '#ffb85e';
+        canvasCtx.lineWidth = 3;
+      } else {
+        canvasCtx.strokeStyle = 'rgba(94, 197, 255, 0.3)';
+        canvasCtx.lineWidth = 1;
+      }
       canvasCtx.stroke();
 
-      if (i === 0) {
-        const labelX = centerX + Math.cos(angle) * (radius + labelOffset);
-        const labelY = centerY + Math.sin(angle) * (radius + labelOffset);
-        canvasCtx.save();
-        canvasCtx.translate(labelX, labelY);
-        canvasCtx.rotate(angle + Math.PI / 2);
-        canvasCtx.fillStyle = 'rgba(94, 197, 255, 1)';
-        canvasCtx.font = `bold ${labelFontSize}px Arial`;
+      if (isAscendant) {
+        canvasCtx.fillStyle = '#ffb95eff';
+        canvasCtx.font = `bold ${labelFontSize}px "Segoe UI"`;
         canvasCtx.textAlign = 'center';
-        canvasCtx.textBaseline = 'middle';
-        canvasCtx.fillText('ASC', 0, 0);
-        canvasCtx.restore();
+        const labelX = centerX + Math.cos(houseAngle) * (radius - labelOffset);
+        const labelY = centerY + Math.sin(houseAngle) * (radius - labelOffset);
+        canvasCtx.fillText('AC', labelX, labelY);
       }
     }
     
