@@ -309,11 +309,8 @@ const ComparisonChartRenderer = (function() {
           const distance = Math.sqrt((mouseX - planet.x) ** 2 + (mouseY - planet.y) ** 2);
           
           if (distance <= planetRadius) {
-            const dx = planet.x - compChartData.centerX;
-            const dy = planet.y - compChartData.centerY;
-            let angle_rad = Math.atan2(dy, dx);
-            let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
-            let zodiacLon = ((-canvas_angle + 180 + compChartData.subjectAsc) % 360 + 360) % 360;
+            // Use the actual planet longitude instead of reverse-calculating from position
+            const zodiacLon = planet.longitude;
             
             const signIndex = getSignIndexFromLongitude(zodiacLon);
             const signName = AstroConstants.SIGN_NAMES[signIndex];
@@ -341,11 +338,8 @@ const ComparisonChartRenderer = (function() {
           const distance = Math.sqrt((mouseX - planet.x) ** 2 + (mouseY - planet.y) ** 2);
           
           if (distance <= planetRadius) {
-            const dx = planet.x - compChartData.centerX;
-            const dy = planet.y - compChartData.centerY;
-            let angle_rad = Math.atan2(dy, dx);
-            let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
-            let zodiacLon = ((-canvas_angle + 180 + compChartData.subjectAsc) % 360 + 360) % 360;
+            // Use the actual planet longitude instead of reverse-calculating from position
+            const zodiacLon = planet.longitude;
             
             const signIndex = getSignIndexFromLongitude(zodiacLon);
             const signName = AstroConstants.SIGN_NAMES[signIndex];
