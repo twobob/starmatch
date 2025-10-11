@@ -121,7 +121,15 @@ const ComparisonChartRenderer = (function() {
 
   // Draw target ascendant line
   function drawTargetAscendantLine(compCtx, centerX, centerY, innerRadius, subjectAsc, targetAsc) {
-    const targetAscAngle = (((targetAsc - subjectAsc + 180) % 360) * Math.PI) / 180;
+    // The zodiac wheel is rotated so subject's ascendant is at 9 o'clock (180°)
+    // Target's ascendant needs to be drawn relative to this rotation
+    // Angular difference between target and subject ascendant
+    let diff = targetAsc - subjectAsc;
+    if (diff < 0) diff += 360;
+    
+    // Convert to canvas angle: start at 180° (9 o'clock) and subtract the difference
+    const targetAscAngle = ((180 - diff) * Math.PI) / 180;
+    
     compCtx.beginPath();
     compCtx.moveTo(centerX, centerY);
     compCtx.lineTo(
@@ -262,7 +270,11 @@ const ComparisonChartRenderer = (function() {
       });
       
       // Draw target ascendant line (dashed purple) with appropriate opacity
-      const targetAscAngle = (((targetAsc - subjectAsc + 180) % 360) * Math.PI) / 180;
+      // The zodiac wheel is rotated so subject's ascendant is at 9 o'clock (180°)
+      let diff = targetAsc - subjectAsc;
+      if (diff < 0) diff += 360;
+      const targetAscAngle = ((180 - diff) * Math.PI) / 180;
+      
       compCtx.globalAlpha = targetPlanetOpacity;
       compCtx.beginPath();
       compCtx.moveTo(centerX, centerY);
@@ -388,8 +400,10 @@ const ComparisonChartRenderer = (function() {
         };
       }
       
-      // Target ascendant (purple)
-      const targetAscAngle = (((compChartData.targetAsc - compChartData.subjectAsc + 180) % 360) * Math.PI) / 180;
+      // Target ascendant (purple) - offset from subject's 9 o'clock position
+      let diff = compChartData.targetAsc - compChartData.subjectAsc;
+      if (diff < 0) diff += 360;
+      const targetAscAngle = ((180 - diff) * Math.PI) / 180;
       const targetAscX = centerX + Math.cos(targetAscAngle) * innerRadius;
       const targetAscY = centerY + Math.sin(targetAscAngle) * innerRadius;
       
