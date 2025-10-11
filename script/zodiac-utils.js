@@ -1,9 +1,9 @@
-// ============================================================================
+
 // Zodiac Utils Module
-// ============================================================================
+
 // Handles zodiac sign calculations, coordinate transformations, and house
 // calculations. Contains the sign reversal logic that will be fixed later.
-// ============================================================================
+
 
 const ZodiacUtils = (function() {
   'use strict';

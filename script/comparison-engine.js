@@ -47,8 +47,8 @@
         return null;
       }
       
-      // Create UTC date from record
-      const date = AstroCalc.toUTC(record.date, record.time);
+      // Create UTC date from record - MUST PASS LAT/LON FOR TIMEZONE LOOKUP
+      const date = AstroCalc.toUTC(record.date, record.time, latitude, longitude);
       if (!date) {
         console.error('calculateChartForRecord: Invalid date/time in record');
         return null;

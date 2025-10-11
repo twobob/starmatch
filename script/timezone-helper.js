@@ -1,6 +1,6 @@
-// ============================================================================
+
 // Timezone Helper - Automatic timezone detection from coordinates
-// ============================================================================
+
 
 /**
  * Timezone regions defined by lat/lon boundaries

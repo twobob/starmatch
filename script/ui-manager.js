@@ -1,13 +1,13 @@
-// ============================================================================
+
 // UI Manager Module
-// ============================================================================
+
 // Handles user interface interactions including:
 // - Toast notifications
 // - Modal windows (save, danger/delete confirmation)
 // - Records panel management
 // - Record rendering and display
 // - Interactive tooltips for chart elements
-// ============================================================================
+
 
 const UIManager = (function() {
   'use strict';
@@ -215,8 +215,16 @@ const UIManager = (function() {
         const distance = Math.sqrt((mouseX - planet.x) ** 2 + (mouseY - planet.y) ** 2);
         
         if (distance <= planetRadius) {
-          const { signName, degree } = getSignInfo(planet.longitude);
-          const signIndex = getSignIndexFromLongitude(planet.longitude);
+          // Calculate sign from visual position on canvas
+          const dx = planet.x - chartData.centerX;
+          const dy = planet.y - chartData.centerY;
+          let angle_rad = Math.atan2(dy, dx);
+          let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
+          let zodiacLon = ((-canvas_angle + 180 + chartData.ascendant) % 360 + 360) % 360;
+          
+          const signIndex = getSignIndexFromLongitude(zodiacLon);
+          const signName = AstroConstants.SIGN_NAMES[signIndex];
+          const degree = zodiacLon % 30;
           const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
           const quality = AstroConstants.QUALITY_NAMES[Math.floor(signIndex / 4)];
           const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
@@ -240,7 +248,8 @@ const UIManager = (function() {
   }
 
   function checkMainChartAscendantHover(mouseX, mouseY, chartData) {
-    const ascAngle = ((-180) * Math.PI) / 180;
+    // Ascendant line is ALWAYS at 180 degrees (9 o'clock) - it's a fixed house cusp
+    const ascAngle = Math.PI; // 180 degrees
     const x1 = chartData.centerX;
     const y1 = chartData.centerY;
     const x2 = chartData.centerX + Math.cos(ascAngle) * chartData.innerRadius;
@@ -248,7 +257,7 @@ const UIManager = (function() {
     
     const distance = distanceToLineSegment(mouseX, mouseY, x1, y1, x2, y2);
     
-    if (distance <= 5) {
+    if (distance <= 8) {
       const { signName, degree } = getSignInfo(chartData.ascendant);
       
       return {
@@ -317,7 +326,7 @@ const UIManager = (function() {
     if (distance >= chartData.innerRadius && distance <= chartData.outerRadius) {
       let angle_rad = Math.atan2(dy, dx);
       let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
-      let zodiacLon = ((canvas_angle - 180 + chartData.ascendant) % 360 + 360) % 360;
+      let zodiacLon = ((-canvas_angle + 180 + chartData.ascendant) % 360 + 360) % 360;
       const signIndex = getSignIndexFromLongitude(zodiacLon);
       const signName = AstroConstants.SIGN_NAMES[signIndex];
       const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
@@ -337,8 +346,8 @@ const UIManager = (function() {
   }
 
   function updateTooltip(evt, chartData) {
-    const tooltip = document.getElementById('tooltip');
-    const canvas = document.getElementById('canvas');
+    const tooltip = document.getElementById('chart-tooltip');
+    const canvas = document.getElementById('chart-canvas');
     
     if (!tooltip || !canvas) return;
     

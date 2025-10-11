@@ -1,7 +1,7 @@
-// ============================================================================
+
 // Starmatch Engine - Astronomy Engine Integration
 // Uses astronomy-engine library for accurate planetary calculations
-// ============================================================================
+
 
 const canvas = document.getElementById('chart-canvas');
 const ctx = canvas.getContext('2d');
@@ -118,9 +118,9 @@ const ELEMENT_COLOURS = {
   Water: '#a78bfa'    // Purple - emotional, deep
 };
 
-// ============================================================================
+
 // Chart Configuration
-// ============================================================================
+
 
 // Main chart dimensions and radii
 const MAIN_CHART_CONFIG = {
@@ -151,7 +151,7 @@ const COMPARISON_HOUSE_CUSP_OPTIONS = {
   numeralRadiusFactor: 0.25
 };
 
-// ============================================================================
+
 
 // Use ZodiacUtils module functions
 // Functions now provided by zodiac-utils.js module
@@ -176,9 +176,9 @@ let chartData = {
 let astronomyEngineReady = false;
 window.astronomyEngineReady = false;
 
-// ============================================================================
+
 // Load Astronomy Engine with Fallback
-// ============================================================================
+
 
 (function loadAstronomyEngine() {
   const cdns = [
@@ -224,9 +224,9 @@ window.astronomyEngineReady = false;
   tryNext();
 })();
 
-// ============================================================================
+
 // Helper Functions
-// ============================================================================
+
 
 // TidyUpAndFloat - needed by engine.js
 function TidyUpAndFloat(value) {
@@ -236,9 +236,9 @@ function TidyUpAndFloat(value) {
 // Note: toUTC, getEclipticLongitude, calculateAscendant, calculateMidheaven
 // moved to astronomical-calculations.js module and accessed via AstroCalc.*
 
-// ============================================================================
+
 // Chart Calculation
-// ============================================================================
+
 
 function calculateChart() {
   if (!astronomyEngineReady) {
@@ -359,9 +359,9 @@ function calculateChart() {
   }
 }
 
-// ============================================================================
+
 // Display Functions
-// ============================================================================
+
 
 function displayPositions(positions, ascendant, midheaven) {
   positionsDisplay.innerHTML = '';
@@ -679,9 +679,9 @@ function displayDominants() {
   dominantInfo.appendChild(themeItem);
 }
 
-// ============================================================================
+
 // Chart Wheel Visualisation 
-// ============================================================================
+
 
 function drawChartWheel(positions, ascendant, midheaven) {
   const centerX = canvas.width / 2;
@@ -718,10 +718,10 @@ function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius
     return ELEMENT_COLOURS[element];
   };
 
-  const offset = 180 - ascendant;
+  const offset = 180 + ascendant;
   for (let i = 0; i < 12; i++) {
-    const startDeg = (i * 30 + offset) % 360;
-    const endDeg = ((i + 1) * 30 + offset) % 360;
+    const startDeg = (-i * 30 + offset) % 360;
+    const endDeg = (-(i + 1) * 30 + offset) % 360;
     // Calculate which sign should be displayed in this segment
     const segmentLongitude = (i * 30) % 360;
     const signIndex = getSignIndexFromLongitude(segmentLongitude);
@@ -730,7 +730,7 @@ function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius
 
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
-    ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
+    ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle, true);
     ctx.closePath();
     const signColour = getSignColour(signIndex);
     ctx.fillStyle = signColour + '20';
@@ -751,7 +751,7 @@ function drawZodiacWheelOnCanvas(ctx, centerX, centerY, outerRadius, innerRadius
     ctx.stroke();
 
     // Center label in the middle of the segment
-    const labelDeg = (offset + i * 30 + 15) % 360;
+    const labelDeg = (offset - i * 30 - 15) % 360;
     const labelAngle = (labelDeg * Math.PI) / 180;
     
     // Calculate font sizes and offsets based on chart type
@@ -844,7 +844,7 @@ function drawHouseCuspsOnCanvas(canvasCtx, centerX, centerY, radius, options = {
   
   // Draw numerals for houses
   for (let i = 0; i < 12; i++) {
-    const houseNumAngle = ((-90 + (9 + i) * 30 + 15) * Math.PI) / 180;
+    const houseNumAngle = ((-90 - (3 + i) * 30 - 15) * Math.PI) / 180;
     const numeralRadius = radius * numeralRadiusFactor;
     const numeralX = centerX + Math.cos(houseNumAngle) * numeralRadius;
     const numeralY = centerY + Math.sin(houseNumAngle) * numeralRadius;
@@ -874,7 +874,7 @@ function calculatePlanetPositionsWithCollisionDetection(positions, ascendant, ce
   Object.entries(positions).forEach(([name, longitude]) => {
     if (longitude === undefined || longitude === null || isNaN(longitude)) return;
     
-    const angle = (((longitude - ascendant + 180) % 360) * Math.PI) / 180;
+    const angle = longitudeToCanvasAngle(longitude, ascendant);
     const planetIndex = PLANET_NAMES.indexOf(name);
     if (planetIndex === -1) return;
     
@@ -978,9 +978,15 @@ function drawPlanets(centerX, centerY, radius, positions, ascendant) {
   return planetsArray;
 }
 
-// ============================================================================
+
 // Shared Chart Drawing Utilities
-// ============================================================================
+
+
+// Convert zodiac longitude to canvas angle (in radians)
+// This is the SINGLE SOURCE OF TRUTH for longitude→angle conversion
+function longitudeToCanvasAngle(longitude, ascendant) {
+  return (((-longitude - ascendant + 180) % 360) * Math.PI) / 180;
+}
 
 // Helper function to get planet colour based on its sign's element
 function getPlanetColourByLongitude(longitude) {
@@ -1021,7 +1027,7 @@ function calculateAspects(positions, planetsArray, ascendant, centerX, centerY, 
             x1 = planet1Data.x;
             y1 = planet1Data.y;
           } else {
-            const angle1 = (((p1.longitude - ascendant + 180) % 360) * Math.PI) / 180;
+            const angle1 = longitudeToCanvasAngle(p1.longitude, ascendant);
             x1 = centerX + Math.cos(angle1) * radius;
             y1 = centerY + Math.sin(angle1) * radius;
           }
@@ -1030,7 +1036,7 @@ function calculateAspects(positions, planetsArray, ascendant, centerX, centerY, 
             x2 = planet2Data.x;
             y2 = planet2Data.y;
           } else {
-            const angle2 = (((p2.longitude - ascendant + 180) % 360) * Math.PI) / 180;
+            const angle2 = longitudeToCanvasAngle(p2.longitude, ascendant);
             x2 = centerX + Math.cos(angle2) * radius;
             y2 = centerY + Math.sin(angle2) * radius;
           }
@@ -1093,9 +1099,9 @@ function drawAspects(centerX, centerY, radius, positions, ascendant, planetsArra
   chartData.planetsArray = planetsArray;
 }
 
-// ============================================================================
+
 // UI Functions - Now provided by UIManager module
-// ============================================================================
+
 
 // Use UIManager module functions instead of duplicates
 const showToast = (message, type, duration) => UIManager.showToast(message, type, duration);
@@ -1107,9 +1113,9 @@ const closeSaveModal = () => UIManager.closeSaveModal();
 const openDangerModal = () => UIManager.openDangerModal();
 const closeDangerModal = () => UIManager.closeDangerModal();
 
-// ============================================================================
+
 // Storage & CRUD Functions
-// ============================================================================
+
 
 // Use StorageManager module functions instead of duplicates
 const loadRecords = () => StorageManager.load();
@@ -1153,152 +1159,18 @@ function updateDangerModal() {
   UIManager.updateDangerModal(dangerStage);
 }
 
-// ============================================================================
-// Interactive Tooltips - Now provided by UIManager module
-// ============================================================================
 
-// Tooltip update wrapper
+// Interactive Tooltips - Now provided by UIManager module
+
+
+// Tooltip update wrapper - delegates to UIManager
 function updateTooltip(evt) {
   UIManager.updateTooltip(evt, chartData);
 }
 
-function checkPlanetHover(mouseX, mouseY) {
-  const planetRadius = 15; // Increased to ensure we catch planets over aspect lines
-  
-  // Use collision-adjusted positions from planetsArray if available
-  if (chartData.planetsArray && chartData.planetsArray.length > 0) {
-    for (const planet of chartData.planetsArray) {
-      const distance = Math.sqrt((mouseX - planet.x) ** 2 + (mouseY - planet.y) ** 2);
-      
-      if (distance <= planetRadius) {
-        const { signName, degree } = getSignInfo(planet.longitude);
-        const signIndex = getSignIndexFromLongitude(planet.longitude);
-        const element = ELEMENT_NAMES[signIndex % 4];
-        const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
-        const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
-        const isRuling = RULING_PLANETS[signName] === planet.name;
-        
-        return {
-          type: 'planet',
-          name: planet.name,
-          longitude: planet.longitude,
-          position: `${degree.toFixed(2)}°`,
-          sign: signName,
-          element: element,
-          quality: quality,
-          polarity: polarity,
-          isRuling: isRuling
-        };
-      }
-    }
-  }
-  return null;
-}
 
-function checkMainChartAscendantHover(mouseX, mouseY) {
-  const ascAngle = ((-180) * Math.PI) / 180;
-  const x1 = chartData.centerX;
-  const y1 = chartData.centerY;
-  const x2 = chartData.centerX + Math.cos(ascAngle) * chartData.innerRadius;
-  const y2 = chartData.centerY + Math.sin(ascAngle) * chartData.innerRadius;
-  
-  const distance = distanceToLineSegment(mouseX, mouseY, x1, y1, x2, y2);
-  
-  if (distance <= 5) {
-    const { signName, degree } = getSignInfo(chartData.ascendant);
-    
-    return {
-      type: 'ascendant',
-      name: 'Ascendant',
-      position: `${degree.toFixed(2)}°`,
-      sign: signName
-    };
-  }
-  return null;
-}
-
-function checkAspectHover(mouseX, mouseY) {
-  for (const aspect of chartData.aspects) {
-    const distance = distanceToLineSegment(
-      mouseX, mouseY,
-      aspect.x1, aspect.y1,
-      aspect.x2, aspect.y2
-    );
-    
-    if (distance <= 5) {
-      // Get sign info for both planets
-      const p1Lon = chartData.positions[aspect.planet1];
-      const p2Lon = chartData.positions[aspect.planet2];
-      
-      const p1SignIndex = getSignIndexFromLongitude(p1Lon);
-      const p2SignIndex = getSignIndexFromLongitude(p2Lon);
-      
-      const p1Sign = SIGN_NAMES[p1SignIndex];
-      const p2Sign = SIGN_NAMES[p2SignIndex];
-      
-      const p1Element = ELEMENT_NAMES[p1SignIndex % 4];
-      const p2Element = ELEMENT_NAMES[p2SignIndex % 4];
-      
-      const p1Quality = QUALITY_NAMES[Math.floor(p1SignIndex / 4)];
-      const p2Quality = QUALITY_NAMES[Math.floor(p2SignIndex / 4)];
-      
-      const p1Polarity = (p1Element === 'Fire' || p1Element === 'Air') ? '+' : '-';
-      const p2Polarity = (p2Element === 'Fire' || p2Element === 'Air') ? '+' : '-';
-      
-      return {
-        type: 'aspect',
-        planet1: aspect.planet1,
-        planet2: aspect.planet2,
-        aspectType: aspect.type,
-        angle: aspect.angle,
-        orb: aspect.orb,
-        p1Sign: p1Sign,
-        p2Sign: p2Sign,
-        p1Quality: p1Quality,
-        p2Quality: p2Quality,
-        p1Element: p1Element,
-        p2Element: p2Element,
-        p1Polarity: p1Polarity,
-        p2Polarity: p2Polarity
-      };
-    }
-  }
-  return null;
-}
-
-function checkSignHover(mouseX, mouseY) {
-  const dx = mouseX - chartData.centerX;
-  const dy = mouseY - chartData.centerY;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  
-  // Check if in zodiac ring area
-  if (distance >= chartData.innerRadius && distance <= chartData.outerRadius) {
-    // Calculate angle from center
-    let angle_rad = Math.atan2(dy, dx);
-    let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
-    let zodiacLon = ((canvas_angle - 180 + chartData.ascendant) % 360 + 360) % 360;
-    const signIndex = getSignIndexFromLongitude(zodiacLon);
-    const signName = SIGN_NAMES[signIndex];
-    const element = ELEMENT_NAMES[signIndex % 4];
-    const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
-    // Polarity: Fire & Air = Positive (+), Earth & Water = Negative (-)
-    const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
-    
-    return {
-      type: 'sign',
-      name: signName,
-      index: signIndex,
-      element: element,
-      quality: quality,
-      polarity: polarity
-    };
-  }
-  return null;
-}
-
-// ============================================================================
 // Mode Switching
-// ============================================================================
+
 
 /**
  * Update visibility of UI elements based on the current mode.
@@ -1347,9 +1219,9 @@ function switchToStarmatchMode() {
   populateComparisonSelects();
 }
 
-// ============================================================================
+
 // Starmatch Comparison Functions
-// ============================================================================
+
 
 function populateComparisonSelects() {
   const records = loadRecords();
@@ -1860,8 +1732,16 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
         const distance = Math.sqrt((mouseX - planet.x) ** 2 + (mouseY - planet.y) ** 2);
         
         if (distance <= planetRadius) {
-          const { signName, degree } = getSignInfo(planet.longitude);
-          const signIndex = getSignIndexFromLongitude(planet.longitude);
+          // Calculate sign from visual position on canvas
+          const dx = planet.x - compChartData.centerX;
+          const dy = planet.y - compChartData.centerY;
+          let angle_rad = Math.atan2(dy, dx);
+          let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
+          let zodiacLon = ((-canvas_angle + 180 + compChartData.subjectAsc) % 360 + 360) % 360;
+          
+          const signIndex = getSignIndexFromLongitude(zodiacLon);
+          const signName = SIGN_NAMES[signIndex];
+          const degree = zodiacLon % 30;
           const element = ELEMENT_NAMES[signIndex % 4];
           const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
           const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
@@ -1888,8 +1768,16 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
         const distance = Math.sqrt((mouseX - planet.x) ** 2 + (mouseY - planet.y) ** 2);
         
         if (distance <= planetRadius) {
-          const { signName, degree } = getSignInfo(planet.longitude);
-          const signIndex = getSignIndexFromLongitude(planet.longitude);
+          // Calculate sign from visual position on canvas
+          const dx = planet.x - compChartData.centerX;
+          const dy = planet.y - compChartData.centerY;
+          let angle_rad = Math.atan2(dy, dx);
+          let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
+          let zodiacLon = ((-canvas_angle + 180 + compChartData.subjectAsc) % 360 + 360) % 360;
+          
+          const signIndex = getSignIndexFromLongitude(zodiacLon);
+          const signName = SIGN_NAMES[signIndex];
+          const degree = zodiacLon % 30;
           const element = ELEMENT_NAMES[signIndex % 4];
           const quality = QUALITY_NAMES[Math.floor(signIndex / 4)];
           const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
@@ -1924,7 +1812,7 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     const subjectAscY = centerY + Math.sin(subjectAscAngle) * innerRadius;
     
     // Check distance to subject ascendant line
-    const distToSubjectAsc = distanceToLineSegment(
+    const distToSubjectAsc = UIManager.distanceToLineSegment(
       mouseX, mouseY,
       centerX, centerY,
       subjectAscX, subjectAscY
@@ -1954,7 +1842,7 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     const targetAscY = centerY + Math.sin(targetAscAngle) * innerRadius;
     
     // Check distance to target ascendant line
-    const distToTargetAsc = distanceToLineSegment(
+    const distToTargetAsc = UIManager.distanceToLineSegment(
       mouseX, mouseY,
       centerX, centerY,
       targetAscX, targetAscY
@@ -1991,7 +1879,7 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
       // Calculate angle from center
       let angle_rad = Math.atan2(dy, dx);
       let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
-      let zodiacLon = ((canvas_angle - 180 + compChartData.subjectAsc) % 360 + 360) % 360;
+      let zodiacLon = ((-canvas_angle - 180 + compChartData.subjectAsc) % 360 + 360) % 360;
       
       const signIndex = getSignIndexFromLongitude(zodiacLon);
       const signName = SIGN_NAMES[signIndex];
@@ -2015,7 +1903,7 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
   function checkAspectHover(mouseX, mouseY) {
     // Check subject aspects first
     for (const aspect of compChartData.subjectAspects) {
-      const distance = distanceToLineSegment(
+      const distance = UIManager.distanceToLineSegment(
         mouseX, mouseY,
         aspect.x1, aspect.y1,
         aspect.x2, aspect.y2
@@ -2063,7 +1951,7 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
     
     // Check target aspects
     for (const aspect of compChartData.targetAspects) {
-      const distance = distanceToLineSegment(
+      const distance = UIManager.distanceToLineSegment(
         mouseX, mouseY,
         aspect.x1, aspect.y1,
         aspect.x2, aspect.y2
@@ -2219,9 +2107,9 @@ function setupComparisonChartTooltips(subjectPos, targetPos, subjectAsc, targetA
   compCanvas.addEventListener('mouseleave', mouseleaveHandler);
 }
 
-// ============================================================================
+
 // Event Listeners
-// ============================================================================
+
 
 btnCalculate.addEventListener('click', calculateChart);
 
