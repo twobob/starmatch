@@ -690,6 +690,21 @@ function updateCompareButton() {
 function performComparison() {
   if (!currentSubject || !currentTarget) return;
   
+  // Clear previous comparison output and cleanup old event listeners
+  if (comparisonOutput) {
+    comparisonOutput.innerHTML = '';
+  }
+  
+  // Cleanup old tooltip listeners if they exist
+  if (comparisonTooltipListeners) {
+    const compCanvas = document.getElementById('comparison-chart-canvas');
+    if (compCanvas) {
+      compCanvas.removeEventListener('mousemove', comparisonTooltipListeners.mousemove);
+      compCanvas.removeEventListener('mouseleave', comparisonTooltipListeners.mouseleave);
+    }
+    comparisonTooltipListeners = null;
+  }
+  
   // Calculate both charts using ComparisonEngine module
   const subjectPos = ComparisonEngine.calculateChartForRecord(currentSubject);
   const targetPos = ComparisonEngine.calculateChartForRecord(currentTarget);
