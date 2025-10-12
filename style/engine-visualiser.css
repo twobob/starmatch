@@ -14,7 +14,7 @@ body {
   background: radial-gradient(circle at top, #1a2233, #0b0d13 70%);
   color: #e2eeff;
   min-height: 100vh;
-  padding: 2rem 0;
+  padding: 2rem 0 3.25rem; /* leave space for footer */
   overflow-x: hidden;
   max-width: 100vw;
   box-sizing: border-box;
@@ -366,6 +366,44 @@ main {
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
   box-sizing: border-box;
   width: 100%;
+}
+
+/* Subtle site footer with Privacy link */
+.site-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  padding: 10px 12px;
+  background: rgba(8, 12, 20, 0.5);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(6px);
+  z-index: 500;
+}
+
+.site-footer a {
+  color: #9eb3d8;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+
+.site-footer a:hover {
+  color: #c7d7f4;
+  border-color: rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+}
+
+.site-footer a[aria-current="page"] {
+  color: var(--accent);
+  border-color: rgba(94, 197, 255, 0.35);
 }
 
 /* Header Title Row */

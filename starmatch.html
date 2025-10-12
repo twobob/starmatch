@@ -6,6 +6,12 @@
   <title>Starmatch - Astrological Comparision Engine</title>
   <link rel="stylesheet" href="style/engine-visualiser.css">
   <link rel="stylesheet" href="style/location-picker.css">
+  <style>
+    /* Page-specific: Footer should not be fixed on Starmatch page */
+    body { padding-bottom: 2rem !important; min-height: 100vh; display: flex; flex-direction: column; }
+    main { flex: 1 0 auto; }
+    .site-footer { position: static; background: transparent; backdrop-filter: none; }
+  </style>
 </head>
 <body>
   <main>
@@ -334,5 +340,9 @@
   <script src="script/comparison-engine.js"></script>
   <script src="script/test/comparison-engine.test.js"></script>
   <script src="script/self-test.js"></script>
+  
+  <footer class="site-footer" role="contentinfo">
+    <a href="privacy.html" aria-label="Read the privacy policy">Privacy</a>
+  </footer>
 </body>
 </html>
