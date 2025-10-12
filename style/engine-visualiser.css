@@ -198,7 +198,22 @@ body {
 .pill-btn.danger:hover { background: rgba(255,120,120,0.25); }
 
 /* Modal */
-.modal.hidden { display: none; }
+.modal.hidden,
+.modal-overlay.hidden { 
+  display: none;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
 .modal {
   position: fixed;
   inset: 0;
@@ -208,6 +223,94 @@ body {
   align-items: center;
   z-index: 2000;
   backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 500px;
+  background: rgba(14,16,22,0.95);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  overflow: hidden;
+}
+
+.settings-modal-content {
+  max-width: 600px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--accent);
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #8fa8ce;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.modal-close:hover {
+  color: var(--accent);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.setting-item {
+  margin-bottom: 1.5rem;
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.setting-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.setting-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.setting-text {
+  font-size: 1rem;
+  color: #e2eeff;
+  font-weight: 500;
+}
+
+.setting-description {
+  margin: 0.5rem 0 0 2.25rem;
+  font-size: 0.85rem;
+  color: #8fa8ce;
+  line-height: 1.5;
 }
 
 .modal-dialog {
@@ -265,8 +368,44 @@ main {
   width: 100%;
 }
 
+/* Header Title Row */
+.header-title-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+/* Settings Button */
+.settings-btn {
+  position: absolute;
+  right: 0;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, opacity 0.2s;
+  opacity: 0.8;
+}
+
+.settings-btn:hover {
+  opacity: 1;
+  transform: rotate(45deg);
+}
+
+.settings-btn svg {
+  width: 42px;
+  height: 42px;
+  stroke: currentColor;
+}
+
 header h1 {
-  margin: 0 0 0.75rem;
+  margin: 0;
   font-size: 2rem;
   color: var(--accent);
   text-align: center;
@@ -664,6 +803,25 @@ h3 {
   color: #e2eeff;
   font-size: 1rem;
   font-family: 'Fira Code', monospace;
+}
+
+/* Text input styling - same as picker inputs */
+.input-field .text-input {
+  padding: 0.75rem;
+  background: rgba(94, 197, 255, 0.08);
+  border: 1px solid rgba(94, 197, 255, 0.3);
+  border-radius: 6px;
+  color: #e2eeff;
+  font-size: 1rem;
+  font-family: 'Fira Code', monospace;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input-field .text-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(94, 197, 255, 0.15);
 }
 
 .input-field input:focus,

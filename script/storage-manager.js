@@ -1,18 +1,62 @@
 // ============================================================================
 // Storage Manager - LocalStorage CRUD Operations
-// Handles all persistent data storage for natal chart records
+// Handles all persistent data storage for natal chart records and settings
 // ============================================================================
 
 const STORAGE_KEY = 'starmatch_records';
+const SETTINGS_KEY = 'starmatch_settings';
+
+// Detect if localStorage is available
+const hasLocalStorage = (() => {
+  try {
+    const testKey = '__localStorage_test__';
+    localStorage.setItem(testKey, 'test');
+    localStorage.removeItem(testKey);
+    return true;
+  } catch (e) {
+    return false;
+  }
+})();
+
+// Cookie fallback utilities
+const CookieStorage = {
+  setItem(key, value) {
+    const expiryDays = 365;
+    const date = new Date();
+    date.setTime(date.getTime() + (expiryDays * 24 * 60 * 60 * 1000));
+    const expires = `expires=${date.toUTCString()}`;
+    document.cookie = `${key}=${encodeURIComponent(value)};${expires};path=/;SameSite=Strict`;
+  },
+
+  getItem(key) {
+    const name = key + '=';
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const cookieArray = decodedCookie.split(';');
+    for (let i = 0; i < cookieArray.length; i++) {
+      let cookie = cookieArray[i].trim();
+      if (cookie.indexOf(name) === 0) {
+        return cookie.substring(name.length);
+      }
+    }
+    return null;
+  },
+
+  removeItem(key) {
+    document.cookie = `${key}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+  }
+};
+
+// Storage abstraction layer
+const storage = hasLocalStorage ? localStorage : CookieStorage;
 
 const StorageManager = {
   /**
-   * Load all records from localStorage
+   * Load all records from storage
    * @returns {Array} Array of record objects
    */
   load() {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = storage.getItem(STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (e) {
       console.error('Error loading records:', e);
@@ -21,15 +65,15 @@ const StorageManager = {
   },
 
   /**
-   * Save records array to localStorage
+   * Save records array to storage
    * @param {Array} records - Array of record objects to save
    */
   save(records) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      storage.setItem(STORAGE_KEY, JSON.stringify(records));
     } catch (e) {
       console.error('Error saving records:', e);
-      throw new Error('Failed to save records to localStorage');
+      throw new Error('Failed to save records to storage');
     }
   },
 
@@ -100,6 +144,88 @@ const StorageManager = {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+  },
+
+  /**
+   * Settings Management
+   * Separate from records, stored in starmatch_settings key
+   */
+  settings: {
+    /**
+     * Load all settings from storage
+     * @returns {Object} Settings object
+     */
+    load() {
+      try {
+        const stored = storage.getItem(SETTINGS_KEY);
+        return stored ? JSON.parse(stored) : {};
+      } catch (e) {
+        console.error('Error loading settings:', e);
+        return {};
+      }
+    },
+
+    /**
+     * Save entire settings object to storage
+     * @param {Object} settings - Complete settings object
+     */
+    save(settings) {
+      try {
+        storage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      } catch (e) {
+        console.error('Error saving settings:', e);
+        throw new Error('Failed to save settings to storage');
+      }
+    },
+
+    /**
+     * Get a specific setting value
+     * @param {string} key - Setting key
+     * @param {*} defaultValue - Default value if key not found
+     * @returns {*} Setting value or default
+     */
+    get(key, defaultValue = null) {
+      const settings = this.load();
+      return settings.hasOwnProperty(key) ? settings[key] : defaultValue;
+    },
+
+    /**
+     * Set a specific setting value
+     * @param {string} key - Setting key
+     * @param {*} value - Setting value
+     */
+    set(key, value) {
+      const settings = this.load();
+      settings[key] = value;
+      this.save(settings);
+    },
+
+    /**
+     * Update multiple settings at once
+     * @param {Object} updates - Object with key-value pairs to update
+     */
+    update(updates) {
+      const settings = this.load();
+      Object.assign(settings, updates);
+      this.save(settings);
+    },
+
+    /**
+     * Clear all settings
+     */
+    clear() {
+      this.save({});
+    },
+
+    /**
+     * Remove a specific setting
+     * @param {string} key - Setting key to remove
+     */
+    remove(key) {
+      const settings = this.load();
+      delete settings[key];
+      this.save(settings);
+    }
   }
 };
 

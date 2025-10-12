@@ -49,6 +49,12 @@ let dangerStage = 0;
 // Mode toggle elements
 const btnChartMode = document.getElementById('btn-chart-mode');
 const btnStarmatchMode = document.getElementById('btn-starmatch-mode');
+
+// Settings modal elements
+const settingsBtn = document.getElementById('settings-btn');
+const settingsModal = document.getElementById('settings-modal');
+const settingsClose = document.getElementById('settings-close');
+const useTextInputsCheckbox = document.getElementById('use-text-inputs');
 const starmatchSection = document.getElementById('starmatch-section');
 const chartInputControls = document.querySelector('.input-controls');
 const chartVisualisation = document.querySelector('.chart-visualisation');
@@ -246,10 +252,10 @@ function calculateChart() {
     return;
   }
   
-  const dateStr = birthDate.value;
-  const timeStr = birthTime.value;
-  const latitude = parseFloat(latitudeInput.value);
-  const longitude = parseFloat(longitudeInput.value);
+  const dateStr = InputManager.getDate();
+  const timeStr = InputManager.getTime();
+  const latitude = InputManager.getLatitude();
+  const longitude = InputManager.getLongitude();
 
   if (!dateStr || !timeStr) {
     showToast('Please enter birth date and time', 'error');
@@ -537,11 +543,12 @@ const deleteRecord = (id) => StorageManager.delete(id);
 const clearAllRecords = () => StorageManager.clear();
 
 function buildRecordPayload(name) {
+  const values = InputManager.getAllValues();
   return StorageManager.build(name, {
-    date: birthDate.value || '',
-    time: birthTime.value || '',
-    lat: latitudeInput.value || '',
-    lon: longitudeInput.value || '',
+    date: values.date || '',
+    time: values.time || '',
+    lat: values.lat !== null ? String(values.lat) : '',
+    lon: values.lon !== null ? String(values.lon) : '',
     orbType: orbTypeSelect.value,
     aspectOrbSet: aspectOrbSetSelect.value,
     rulershipSet: rulershipSetSelect.value,
@@ -550,10 +557,10 @@ function buildRecordPayload(name) {
 }
 
 function applyRecord(rec, doCalculate=false, includeSettings=true) {
-  if (rec.date) birthDate.value = rec.date;
-  if (rec.time) birthTime.value = rec.time;
-  if (rec.lat) latitudeInput.value = rec.lat;
-  if (rec.lon) longitudeInput.value = rec.lon;
+  if (rec.date) InputManager.setDate(rec.date);
+  if (rec.time) InputManager.setTime(rec.time);
+  if (rec.lat) InputManager.setLatitude(parseFloat(rec.lat));
+  if (rec.lon) InputManager.setLongitude(parseFloat(rec.lon));
   if (includeSettings) {
     orbTypeSelect.value = rec.orbType || '0';
     aspectOrbSetSelect.value = rec.aspectOrbSet || '0';
@@ -795,8 +802,8 @@ locationLookupBtn?.addEventListener('click', () => {
     const picker = initLocationPicker();
     picker.open((location) => {
       // Update the latitude and longitude inputs
-      latitudeInput.value = location.latitude.toFixed(4);
-      longitudeInput.value = location.longitude.toFixed(4);
+      InputManager.setLatitude(location.latitude);
+      InputManager.setLongitude(location.longitude);
       
       // Display the selected location name
       selectedLocationName.textContent = `📍 ${location.name} (${location.fullAddress})`;
@@ -1008,6 +1015,48 @@ document.addEventListener('DOMContentLoaded', () => {
 btnChartMode?.addEventListener('click', switchToChartMode);
 btnStarmatchMode?.addEventListener('click', switchToStarmatchMode);
 
+// Settings modal handlers - ensure elements exist
+if (settingsBtn && settingsModal) {
+  settingsBtn.addEventListener('click', () => {
+    settingsModal.classList.remove('hidden');
+  });
+}
+
+if (settingsClose && settingsModal) {
+  settingsClose.addEventListener('click', () => {
+    settingsModal.classList.add('hidden');
+  });
+}
+
+// Close settings modal when clicking outside
+if (settingsModal) {
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+      settingsModal.classList.add('hidden');
+    }
+  });
+}
+
+// Load and save text input mode preference
+if (useTextInputsCheckbox) {
+  // Load saved preference
+  const savedPreference = StorageManager.settings.get('useTextInputs', false);
+  useTextInputsCheckbox.checked = savedPreference;
+  
+  // Save preference when changed and toggle input mode
+  useTextInputsCheckbox.addEventListener('change', () => {
+    const isTextMode = useTextInputsCheckbox.checked;
+    StorageManager.settings.set('useTextInputs', isTextMode);
+    
+    // Toggle input mode using InputManager
+    if (typeof InputManager !== 'undefined') {
+      InputManager.setMode(isTextMode);
+    }
+    
+    console.log('Text input mode:', isTextMode ? 'enabled' : 'disabled');
+  });
+}
+
 // Comparison controls
 btnLoadSubject?.addEventListener('click', loadSubjectForComparison);
 btnLoadTarget?.addEventListener('click', loadTargetForComparison);
@@ -1100,6 +1149,11 @@ window.addEventListener('orientationchange', () => {
 // Initialise on load
 document.addEventListener('DOMContentLoaded', () => {
   renderRecords();
+  
+  // Initialize InputManager
+  if (typeof InputManager !== 'undefined') {
+    InputManager.init();
+  }
 });
 
 // Initialise

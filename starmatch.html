@@ -10,7 +10,16 @@
 <body>
   <main>
     <header>
-  <h1>Starmatch</h1>
+  <div class="header-title-row">
+    <h1>Starmatch</h1>
+    <button id="settings-btn" class="settings-btn" aria-label="Settings">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M12 1v6m0 6v6m0-12l-5.2 3m10.4 0L12 7m0 10l-5.2 3m10.4 0L12 17"></path>
+        <path d="M4.93 4.93l4.24 4.24m5.66 5.66l4.24 4.24m0-14.14l-4.24 4.24m-5.66 5.66l-4.24 4.24"></path>
+      </svg>
+    </button>
+  </div>
 
       <!-- Mode Toggle -->
       <div class="mode-toggle">
@@ -25,12 +34,14 @@
         <div class="input-row">
           <div class="input-field">
             <label for="birth-date">Date</label>
-            <input type="date" id="birth-date" value="1974-09-11">
+            <input type="date" id="birth-date" class="picker-input" value="1974-09-11">
+            <input type="text" id="birth-date-text" class="text-input" placeholder="DD MM YYYY" value="11 09 1974" style="display: none;">
             <small id="date-range-hint" style="font-size: 0.7rem; color: #8fa8ce; margin-top: 0.25rem; display: none;"></small>
           </div>
           <div class="input-field">
             <label for="birth-time">Time (Local)</label>
-            <input type="time" id="birth-time" value="14:14">
+            <input type="time" id="birth-time" class="picker-input" value="14:14">
+            <input type="text" id="birth-time-text" class="text-input" placeholder="HH MM" value="14 14" style="display: none;">
             <small style="font-size: 0.7rem; color: #8fa8ce;">Timezone auto-detected from location</small>
           </div>
         </div>
@@ -38,11 +49,13 @@
         <div class="input-row with-lookup">
           <div class="input-field">
             <label for="latitude">Lat</label>
-            <input type="number" id="latitude" min="-90" max="90" step="0.01" value="55.9221" placeholder="55.9221">
+            <input type="number" id="latitude" class="picker-input" min="-90" max="90" step="0.01" value="55.9221" placeholder="55.9221">
+            <input type="text" id="latitude-text" class="text-input" placeholder="55.9221 N or -55.9221" value="55.9221 N" style="display: none;">
           </div>
           <div class="input-field">
             <label for="longitude">Long</label>
-            <input type="number" id="longitude" min="-180" max="180" step="0.01" value="-3.1336" placeholder="-3.1336">
+            <input type="number" id="longitude" class="picker-input" min="-180" max="180" step="0.01" value="-3.1336" placeholder="-3.1336">
+            <input type="text" id="longitude-text" class="text-input" placeholder="3.1336 W or -3.1336" value="3.1336 W" style="display: none;">
           </div>
           <div class="input-field">
             <label>&nbsp;</label>
@@ -273,7 +286,29 @@
       </div>
     </div>
   </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h4>Settings</h4>
+        <button class="icon-btn" id="settings-close" aria-label="Close settings">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="use-text-inputs" class="setting-checkbox">
+            <span class="setting-text">Use text input mode (instead of specialised pickers)</span>
+          </label>
+          <p class="setting-description">When enabled, all date/time/location inputs will be plain text fields instead of specialised picker controls.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Include dependencies -->
+  <script src="script/input-parsers.js"></script>
+  <script src="script/input-manager.js"></script>
   <script src="script/test/test-harness.js"></script>
   <script src="script/constants.js"></script>
   <script src="script/test/constants.test.js"></script>
