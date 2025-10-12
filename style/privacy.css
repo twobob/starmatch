@@ -7,7 +7,7 @@
   border-radius: 12px;
   border: 1px solid var(--border);
   padding: 0.75rem 1rem; /* slightly tighter vertical padding */
-  text-align: center; /* center the banner horizontally */
+  text-align: left; /* anchor left so scaling doesn't shift off screen */
 }
 
 .ascii-banner {
@@ -19,7 +19,7 @@
   line-height: 1.15;
   white-space: pre;
   display: inline-block;
-  transform-origin: top center;
+  transform-origin: left top;
 }
 
 .privacy-section { margin-top: 2rem; }
