@@ -12,4 +12,28 @@
     localStorage.setItem(newKey, oldData);
     console.log('Migration complete');
   }
+  
+  // Migrate rulershipSet -> traditionalFactors in existing records
+  try {
+    const currentData = localStorage.getItem(newKey);
+    if (currentData) {
+      const records = JSON.parse(currentData);
+      let migrated = false;
+      
+      records.forEach(record => {
+        if (record.hasOwnProperty('rulershipSet')) {
+          record.traditionalFactors = record.rulershipSet;
+          delete record.rulershipSet;
+          migrated = true;
+        }
+      });
+      
+      if (migrated) {
+        localStorage.setItem(newKey, JSON.stringify(records));
+        console.log('Migrated rulershipSet -> traditionalFactors in stored records');
+      }
+    }
+  } catch (e) {
+    console.error('Error migrating rulershipSet field:', e);
+  }
 })();

@@ -167,7 +167,7 @@ xProfile = (Σ subject[i] × target[i]) / √(Σ subject[i]² × Σ target[i]²)
 **Our implementation adds:**
 - Precession correction (optional toggle)
 - Aspect orb calculations (configurable)
-- Thematic analysis based on traditional rulerships
+- Thematic analysis based on traditional factors
 - Geocentric ecliptic longitude conversions
 
 ## Troubleshooting

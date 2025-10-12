@@ -12,7 +12,7 @@ An interactive browser-based astrological calculation engine for precise natal c
 2. **Optional: Configure Engine Settings**:
    - **Orb Type**: Aspect-based (default) or Planet-based
    - **Aspect Orb Set**: Select tolerance levels for aspect detection
-   - **Rulership System**: Ancient (traditional), Modern, or Alternative modern
+   - **Traditional Factors**: Ancient (traditional), Modern, or Alternative modern
    - **Precession Correction**: Enable for sidereal adjustment (optional)
 3. **Enter Birth Data**:
    - Date, time (24-hour format)
@@ -83,8 +83,8 @@ An interactive browser-based astrological calculation engine for precise natal c
 - **Aspect Orb Sets** (5 options): Different orb tolerances for aspect detection
   - Default (9°-3°), Tight (2.6°-1°), Wide (10.8°-1.5°), and custom allocations
 - **Orb Type Selection**: Aspect-based orbs or planet-based orbs (Lilly/al-Biruni systems)
-- **Rulership Systems** (3 options): Ancient rulers, Modern rulers, or Alternative modern
-  - Configurable planetary dignities: rulership, exaltation, detriment, fall
+- **Traditional Factors** (3 options): Ancient rulers, Modern rulers, or Alternative modern
+  - Configurable planetary dignities: traditional factors, exaltation, detriment, fall
 - **Precession Correction**: Optional sidereal adjustment relative to Hipparchus (130 BCE)
   - Applies ~30° backward shift for modern dates (one zodiac sign)
 - **Aspect Strength Weighting**: Mathematically derived from circle subdivisions
@@ -140,7 +140,7 @@ For investigating astrological hypotheses:
 1. **Build Dataset**: Save multiple charts in each category (e.g., married couples, siblings, parent-child)
 2. **Record xProfile Values**: Note similarity-complementarity spectrum for each pair
 3. **Statistical Analysis**: Look for patterns (e.g., do long-term partners cluster near xProfile = 0?)
-4. **Parameter Testing**: Re-run with different orb sets, rulership systems, or precession on/off
+4. **Parameter Testing**: Re-run with different orb sets, traditional factors, or precession on/off
 
 ## Technical Details
 
@@ -156,7 +156,7 @@ For investigating astrological hypotheses:
 ### Astrological Engine Algorithm
 - **Theme Calculation**: Point-scoring system across 12 zodiac signs
   - Planetary positions in houses (Placidus-equivalent via equal house approximation)
-  - Rulership dignity weights (ruler, exaltation, detriment, fall)
+  - Traditional factors dignity weights (ruler, exaltation, detriment, fall)
   - Aspect contributions to house themes
   - Mutual reception bonuses
   - Strong planet counts (rulers, exalted planets)
@@ -192,7 +192,7 @@ Records stored in browser localStorage as JSON:
   "lon": "-3.1336",
   "orbType": "0",
   "aspectOrbSet": "0",
-  "rulershipSet": "0",
+  "traditionalFactors": "0",
   "precession": 0,
   "createdAt": "2025-10-06T12:34:56.789Z",
   "updatedAt": "2025-10-06T12:34:56.789Z"
@@ -235,7 +235,7 @@ Starmatch is designed for quantitative astrological research:
 
 1. **Relationship Studies**: Test whether xProfile values correlate with relationship duration, satisfaction, or type
 2. **Family Patterns**: Compare parent-child, sibling, or multi-generational charts for hereditary patterns
-3. **Parameter Sensitivity**: Investigate how different orb sets or rulership systems affect chart interpretation
+3. **Parameter Sensitivity**: Investigate how different orb sets or traditional factors affect chart interpretation
 4. **Precession Testing**: Compare tropical (no precession) vs. sidereal (with precession) results
 5. **Statistical Validation**: Build datasets of chart comparisons to test traditional astrological claims
 6. **Aspect Research**: Analyze which aspects appear most frequently in specific relationship types

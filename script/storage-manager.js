@@ -139,7 +139,7 @@ const StorageManager = {
       lon: inputs.lon || '',
       orbType: inputs.orbType || '0',
       aspectOrbSet: inputs.aspectOrbSet || '0',
-      rulershipSet: inputs.rulershipSet || '0',
+      traditionalFactors: inputs.traditionalFactors || '0',
       precession: inputs.precession || 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

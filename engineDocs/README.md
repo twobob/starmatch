@@ -146,7 +146,7 @@ Quantifies similarity-complementarity balance between two natal charts:
 
 1. **Irregular aspects** (quincunx, sesquiquadrate) are explicitly excluded from engine calculations
 2. **Precession** modifies all planetary/angle positions when enabled
-3. **Parameter combinations** allow systematic research design (e.g., test ancient vs. modern rulership systems)
+3. **Parameter combinations** allow systematic research design (e.g., test ancient vs. modern traditional factors)
 4. **xProfile** requires at least 2 charts; compatibility analysis is bidirectional symmetric
 5. **Functional analysis** is descriptive/approximate, not prescriptive for calculations
 

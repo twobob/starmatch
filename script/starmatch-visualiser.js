@@ -14,7 +14,7 @@ const longitudeInput = document.getElementById('longitude');
 const btnCalculate = document.getElementById('btn-calculate');
 const orbTypeSelect = document.getElementById('orb-type');
 const aspectOrbSetSelect = document.getElementById('aspect-orb-set');
-const rulershipSetSelect = document.getElementById('rulership-set');
+const traditionalFactorsSelect = document.getElementById('traditional-factors');
 const precessionCheckbox = document.getElementById('precession-flag');
 const locationLookupBtn = document.getElementById('location-lookup');
 const selectedLocationName = document.getElementById('selected-location-name');
@@ -100,7 +100,7 @@ const ASPECT_NAMES = ['Conjunction', 'Opposition', 'Trine', 'Square', 'Sextile',
 const ELEMENT_NAMES = ['Fire', 'Earth', 'Air', 'Water'];
 const QUALITY_NAMES = ['Cardinal', 'Fixed', 'Mutable'];
 
-// Ruling planets for each sign (based on traditional and modern rulerships)
+// Ruling planets for each sign (based on traditional and modern factors)
 const RULING_PLANETS = {
   'Aries': 'Mars',
   'Taurus': 'Venus',
@@ -292,7 +292,7 @@ function calculateChart() {
     // Apply engine settings to global variables from engine.js
     window.orbType = parseInt(orbTypeSelect.value);
     window.aoIndex = parseInt(aspectOrbSetSelect.value);
-    window.tfIndex = parseInt(rulershipSetSelect.value);
+    window.tfIndex = parseInt(traditionalFactorsSelect.value);
     window.precessionFlag = precessionCheckbox.checked ? 1 : 0;
     
     const birthYear = new Date(dateStr).getFullYear();
@@ -550,7 +550,7 @@ function buildRecordPayload(name) {
     lon: values.lon !== null ? String(values.lon) : '',
     orbType: orbTypeSelect.value,
     aspectOrbSet: aspectOrbSetSelect.value,
-    rulershipSet: rulershipSetSelect.value,
+    traditionalFactors: traditionalFactorsSelect.value,
     precession: precessionCheckbox.checked ? 1 : 0
   });
 }
@@ -563,7 +563,7 @@ function applyRecord(rec, doCalculate=false, includeSettings=true) {
   if (includeSettings) {
     orbTypeSelect.value = rec.orbType || '0';
     aspectOrbSetSelect.value = rec.aspectOrbSet || '0';
-    rulershipSetSelect.value = rec.rulershipSet || '0';
+    traditionalFactorsSelect.value = rec.traditionalFactors || '0';
     precessionCheckbox.checked = rec.precession === 1;
   }
   if (doCalculate) {

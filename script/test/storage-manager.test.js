@@ -163,7 +163,7 @@ const StorageTests = {
       lon: '-74.0060',
       orbType: '1',
       aspectOrbSet: '2',
-      rulershipSet: '0',
+      traditionalFactors: '0',
       precession: 1
     };
     

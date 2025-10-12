@@ -71,7 +71,7 @@
       if (typeof orbTypeSelect !== 'undefined') {
         window.orbType = parseInt(orbTypeSelect.value);
         window.aoIndex = parseInt(aspectOrbSetSelect.value);
-        window.tfIndex = parseInt(rulershipSetSelect.value);
+        window.tfIndex = parseInt(traditionalFactorsSelect.value);
         window.precessionFlag = precessionCheckbox.checked ? 1 : 0;
       }
       
