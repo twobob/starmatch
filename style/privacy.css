@@ -1,0 +1,63 @@
+/* Page-specific styles for privacy.html. Uses variables from engine-visualiser.css */
+
+.ascii-banner-container {
+  overflow: visible; /* allow height to grow; no clipping */
+  margin-bottom: 0.9rem; /* pull following title up a bit */
+  background: rgba(10, 13, 19, 0.5);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 0.75rem 1rem; /* slightly tighter vertical padding */
+  text-align: center; /* center the banner horizontally */
+}
+
+.ascii-banner {
+  margin: 0;
+  color: var(--accent);
+  font-family: 'Courier New', Consolas, Menlo, monospace;
+  font-variant-ligatures: none;
+
+  line-height: 1.15;
+  white-space: pre;
+  display: inline-block;
+  transform-origin: top center;
+}
+
+.privacy-section { margin-top: 2rem; }
+
+.info-panel {
+  background: rgba(10, 13, 19, 0.5);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.info-panel.highlight {
+  background: rgba(94, 197, 255, 0.1);
+  border: 2px solid var(--accent);
+}
+
+.regulation-item {
+  margin-bottom: 1.5rem;
+  background: rgba(94, 197, 255, 0.06);
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid rgba(94, 197, 255, 0.15);
+}
+
+.regulation-item h5 {
+  color: var(--accent-warm);
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.signature {
+  text-align: center;
+  margin-top: 2rem;
+  font-style: italic;
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+
+@media (max-width: 480px) {
+  /* Height is set by JS; keep transitions minimal */
+}
