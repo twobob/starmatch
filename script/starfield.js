@@ -8,7 +8,7 @@
   - Touch/pointer interaction to stir the field
   - Deep space nebula gradients
   
-  Optimized for 60fps on mobile:
+  Optimised for 60fps on mobile:
   - Offscreen pre-rendered star sprites
   - Careful memory management
   - Batched drawing operations
@@ -29,6 +29,11 @@
   // Device pixel ratio capped at 2 to balance quality vs performance
   const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
   
+  // Cheap bloom: track bright star positions with smooth transitions
+  const activeBloomCenters = [];
+  const MAX_BLOOM_CENTERS = 12; // brutal limit for mobile
+  const BLOOM_FADE_TIME = 240; // frames (~4 seconds) for smooth fade in/out
+  
   // Central state object
   const state = {
     w: 0, 
@@ -38,7 +43,7 @@
     constellationLinks: [],
     attractors: [],
     pointer: { x: 0, y: 0, active: false },
-    maxLinkLifetime: 60, // frames (~1 second at 60fps)
+    maxLinkLifetime: 240, // frames (~4 seconds at 60fps for slower fades)
   };
 
   // Resize canvas maintaining DPR
@@ -53,7 +58,7 @@
     canvas.height = Math.floor(state.h * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     
-    initializeStarfield();
+    initialiseStarfield();
   }
 
   // Cosmic star colors - galactic vibe with purples, blues, reds, yellows, greens
@@ -182,7 +187,7 @@
   }
 
   // Create sprite library for all size/color combinations
-  function initializeSpriteLibrary() {
+  function initialiseSpriteLibrary() {
     starSprites.length = 0;
     for (const size of spriteSizes) {
       for (const colorDef of starColors) {
@@ -196,10 +201,10 @@
     }
   }
 
-  initializeSpriteLibrary();
+  initialiseSpriteLibrary();
 
-  // Initialize stars with natural, random distribution
-  function initializeStarfield() {
+  // Initialise stars with natural, random distribution
+  function initialiseStarfield() {
     state.stars = [];
     
     // Calculate target star count based on screen size
@@ -242,7 +247,7 @@
           spriteData: chosenSprite,
           baseBrightness: 0.5 + Math.random() * 0.5,
           twinklePhase: Math.random() * Math.PI * 2,
-          twinkleSpeed: 0.8 + Math.random() * 0.25, // slower, more subtle
+          twinkleSpeed: 0.02 + Math.random() * 0.06, // much slower, gentle twinkling
           twinkleIntensity: 0.5 + Math.random() * 0.15, // how much brightness varies
           returnStrength: 0.5 + Math.random() * 1.5,
         });
@@ -263,7 +268,7 @@
         phase: Math.random() * Math.PI * 2,
         orbitRadius: Math.min(state.w, state.h) * (0.2 + Math.random() * 0.4),
         angularSpeed: (Math.random() < 0.5 ? -1 : 1) * (0.00005 + Math.random() * 0.0001), // much slower
-        pullStrength: 3 + Math.random() * 5, // much weaker
+        pullStrength: 3 + Math.random() * 10, // weakish pull
         frequencyX: 0.6 + Math.random() * 0.8,
         frequencyY: 0.7 + Math.random() * 0.9,
         x: 0,
@@ -299,12 +304,31 @@
     const stars = state.stars;
     if (stars.length < 3) return;
     
-    // Pick random star as constellation center
-    const centerIdx = Math.floor(Math.random() * stars.length);
+    // ONE constellation at a time, simple stick figure in a local area
+    // Start with a larger star - they're the constellation anchors
+    const weightedStars = stars.map((star, index) => ({
+      index,
+      star,
+      weight: Math.pow(star.spriteData.size, 2.5) // strongly favour large stars as starting points
+    }));
+    
+    const totalWeight = weightedStars.reduce((sum, s) => sum + s.weight, 0);
+    let rand = Math.random() * totalWeight;
+    let centerIdx = 0;
+    
+    for (const ws of weightedStars) {
+      rand -= ws.weight;
+      if (rand <= 0) {
+        centerIdx = ws.index;
+        break;
+      }
+    }
+    
     const center = stars[centerIdx];
     
-    // Find nearby stars within radius
-    const maxDistance = Math.min(state.w, state.h) * 0.2;
+    // Local area only - constellations are compact
+    const maxDistance = Math.min(state.w, state.h) * 0.30; // slightly larger area
+    const maxLineLength = maxDistance * 0.5; // shorter individual lines
     const candidates = [];
     
     for (let i = 0; i < stars.length; i++) {
@@ -312,32 +336,162 @@
       
       const dx = stars[i].x - center.x;
       const dy = stars[i].y - center.y;
-      const distSquared = dx * dx + dy * dy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
       
-      if (distSquared < maxDistance * maxDistance && distSquared > 900) {
-        candidates.push({ index: i, distSquared });
+      if (dist < maxDistance && dist > 20) {
+        // Slight preference for larger stars, but distance is primary factor
+        const sizeWeight = stars[i].spriteData.size;
+        candidates.push({ 
+          index: i, 
+          dist, 
+          x: stars[i].x, 
+          y: stars[i].y,
+          size: stars[i].spriteData.size,
+          weight: (sizeWeight * 2) / dist // balanced: closer stars preferred, size is tie-breaker
+        });
       }
       
-      // Sample only subset for performance
-      if (candidates.length > 12) break;
+      if (candidates.length > 30) break;
     }
     
-    // Sort by distance and pick closest
-    candidates.sort((a, b) => a.distSquared - b.distSquared);
+    if (candidates.length < 2) return;
     
-    // Create 2-5 links from center star
-    const linkCount = 2 + Math.floor(Math.random() * 4);
+    // Sort by weight (size/distance ratio) - prefer larger, closer stars
+    candidates.sort((a, b) => b.weight - a.weight);
     
-    for (let i = 0; i < Math.min(linkCount, candidates.length); i++) {
-      state.constellationLinks.push({
-        starA: centerIdx,
-        starB: candidates[i].index,
-        lifetime: 30 + Math.floor(Math.random() * 30),
-        pulsePhase: Math.random() * Math.PI * 2,
-      });
+    // Build a more complex branching pattern: 6-15 stars, up to 20 connections
+    const patternSize = 6 + Math.floor(Math.random() * 10);
+    const usedStars = [centerIdx];
+    const patternStars = [{ index: centerIdx, x: center.x, y: center.y }];
+    const connections = [];
+    
+    // Build branching tree structure - each star can have 1-3 branches
+    let attemptsLeft = patternSize * 3; // prevent infinite loops
+    
+    while (patternStars.length < patternSize && attemptsLeft > 0) {
+      attemptsLeft--;
+      
+      // Pick a random existing star to branch from
+      const branchFrom = patternStars[Math.floor(Math.random() * patternStars.length)];
+      
+      // Check how many connections this star already has
+      const existingConnections = connections.filter(c => 
+        c.starA === branchFrom.index || c.starB === branchFrom.index
+      );
+      
+      // Limit to 2 connections per star to avoid hubs that create triangles
+      if (existingConnections.length >= 2) continue;
+      
+      // Find closest unused star within line length
+      let bestCandidate = null;
+      let bestScore = -1;
+      
+      for (const candidate of candidates) {
+        if (usedStars.includes(candidate.index)) continue;
+        
+        const dx = candidate.x - branchFrom.x;
+        const dy = candidate.y - branchFrom.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Only consider if line isn't too long
+        if (dist < maxLineLength && dist > 20) {
+          // Check angle constraint - avoid creating triangles
+          let angleOK = true;
+          
+          // For each existing connection from branchFrom, check the angle
+          for (const conn of existingConnections) {
+            const otherStarIdx = conn.starA === branchFrom.index ? conn.starB : conn.starA;
+            const otherStar = patternStars.find(s => s.index === otherStarIdx);
+            
+            if (otherStar) {
+              // Calculate vectors
+              const v1x = otherStar.x - branchFrom.x;
+              const v1y = otherStar.y - branchFrom.y;
+              const v2x = candidate.x - branchFrom.x;
+              const v2y = candidate.y - branchFrom.y;
+              
+              // Calculate angle using dot product
+              const dot = v1x * v2x + v1y * v2y;
+              const mag1 = Math.sqrt(v1x * v1x + v1y * v1y);
+              const mag2 = Math.sqrt(v2x * v2x + v2y * v2y);
+              const cosAngle = dot / (mag1 * mag2);
+              
+              // Reject if angle is too small (< 60 degrees) - would create acute triangle
+              // cos(60°) = 0.5, so reject if cosAngle > 0.5
+              if (cosAngle > 0.5) {
+                angleOK = false;
+                break;
+              }
+            }
+          }
+          
+          if (!angleOK) continue;
+          
+          // Also check that adding this star won't complete a triangle with any two existing stars
+          let createsTriangle = false;
+          for (let i = 0; i < patternStars.length - 1; i++) {
+            for (let j = i + 1; j < patternStars.length; j++) {
+              const star1 = patternStars[i];
+              const star2 = patternStars[j];
+              
+              // Check if star1 and star2 are already connected
+              const alreadyConnected = connections.some(c =>
+                (c.starA === star1.index && c.starB === star2.index) ||
+                (c.starB === star1.index && c.starA === star2.index)
+              );
+              
+              if (alreadyConnected) {
+                // Check if candidate is close to both
+                const dist1 = Math.sqrt(
+                  (candidate.x - star1.x) ** 2 + (candidate.y - star1.y) ** 2
+                );
+                const dist2 = Math.sqrt(
+                  (candidate.x - star2.x) ** 2 + (candidate.y - star2.y) ** 2
+                );
+                
+                // Would create a triangle if close to both
+                if (dist1 < maxLineLength * 0.8 && dist2 < maxLineLength * 0.8) {
+                  createsTriangle = true;
+                  break;
+                }
+              }
+            }
+            if (createsTriangle) break;
+          }
+          
+          if (createsTriangle) continue;
+          
+          // Score based on distance primarily, with slight bonus for larger stars
+          const sizeBonus = candidate.size * 0.5; // small bonus for size
+          const score = candidate.weight * (1 - dist / maxLineLength) + sizeBonus;
+          
+          if (score > bestScore) {
+            bestScore = score;
+            bestCandidate = { ...candidate, dist };
+          }
+        }
+      }
+      
+      if (bestCandidate) {
+        connections.push({
+          starA: branchFrom.index,
+          starB: bestCandidate.index,
+          lifetime: 140 + Math.floor(Math.random() * 120), // 2.3-4.3 seconds - double the fade time
+          pulsePhase: Math.random() * Math.PI * 2,
+        });
+        
+        usedStars.push(bestCandidate.index);
+        patternStars.push(bestCandidate);
+      }
     }
     
-    // Limit total links to prevent memory issues
+    // Skip the extra connections section - they create triangles
+    // Just use the tree structure which naturally avoids triangles
+    
+    // Add all connections to the state
+    state.constellationLinks.push(...connections);
+    
+    // Keep it clean - remove old links
     if (state.constellationLinks.length > 150) {
       state.constellationLinks.splice(0, state.constellationLinks.length - 150);
     }
@@ -435,11 +589,12 @@
       star.twinklePhase += star.twinkleSpeed * deltaTime * 0.002;
     }
 
-    // Spawn new constellation links periodically
+    // Spawn new constellation links - one simple pattern at a time
     nextConstellationTime -= deltaTime;
     if (nextConstellationTime <= 0) {
       createConstellationLinks();
-      nextConstellationTime = 200 + Math.random() * 300; // every 0.2-0.5 seconds
+      // 44% less frequent - every 0.7-1.8 seconds (was 0.4-1.0)
+      nextConstellationTime = 700 + Math.random() * 1100;
     }
 
     // Update and expire constellation links
@@ -482,6 +637,9 @@
     ctx.fillStyle = nebula2;
     ctx.fillRect(0, 0, state.w, state.h);
 
+    // Reset bloom centers for this frame
+    const currentBloomCandidates = [];
+
     // Draw constellation links first (behind stars)
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
@@ -494,15 +652,22 @@
       
       if (!starA || !starB) continue;
       
-      // Fade in and out smoothly
+      // Smooth fade in and out over the full lifetime
       const lifeFraction = link.lifetime / state.maxLinkLifetime;
-      const fadeIn = Math.min(1, (1 - lifeFraction) * 3);
-      const fadeOut = Math.min(1, lifeFraction * 3);
-      const fade = Math.min(fadeIn, fadeOut);
       
-      // Gentle pulsing
-      const pulse = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(link.pulsePhase + state.time * 0.025));
-      const alpha = 0.15 * fade * fade * pulse;
+      // Slow fade in: takes 30% of lifetime to reach full opacity
+      const fadeIn = lifeFraction > 0.7 ? Math.min(1, (1 - lifeFraction) / 0.3) : 1;
+      
+      // Slow fade out: takes 40% of lifetime to fade to zero
+      const fadeOut = lifeFraction < 0.4 ? Math.min(1, lifeFraction / 0.4) : 1;
+      
+      // Combine fades with smooth easing
+      const fade = Math.min(fadeIn, fadeOut);
+      const smoothFade = fade * fade * (3 - 2 * fade); // smoothstep easing
+      
+      // Very gentle, slow pulsing - barely noticeable
+      const pulse = 0.85 + 0.15 * (0.5 + 0.5 * Math.sin(link.pulsePhase + state.time * 0.008));
+      const alpha = 0.18 * smoothFade * pulse;
       
       ctx.strokeStyle = `rgba(170, 220, 255, ${alpha})`;
       ctx.lineWidth = 1.3;
@@ -525,6 +690,18 @@
       const brightness = star.baseBrightness * twinkleModulation;
       const alpha = Math.max(0.3, Math.min(1.0, brightness)); // clamp between 0.3 and 1.0
       
+      // Track bright large stars for bloom effect
+      if (star.spriteData.size > 2.0 && brightness > 0.7 && currentBloomCandidates.length < MAX_BLOOM_CENTERS * 2) {
+        currentBloomCandidates.push({
+          x: star.x,
+          y: star.y,
+          color: star.spriteData.color,
+          size: star.spriteData.size,
+          intensity: brightness * (star.spriteData.size / 5.0),
+          starIndex: i
+        });
+      }
+      
       // Draw pre-rendered sprite
       const sprite = star.spriteData.sprite;
       ctx.globalAlpha = alpha;
@@ -536,6 +713,82 @@
     }
     
     ctx.globalAlpha = 1;
+    
+    // Update active bloom centers with smooth fading
+    // Fade out old blooms
+    for (let i = activeBloomCenters.length - 1; i >= 0; i--) {
+      const bloom = activeBloomCenters[i];
+      
+      // Check if this star is still a candidate
+      const stillActive = currentBloomCandidates.some(c => c.starIndex === bloom.starIndex);
+      
+      if (stillActive) {
+        // Fade in or maintain
+        bloom.fadeProgress = Math.min(BLOOM_FADE_TIME, bloom.fadeProgress + 2);
+      } else {
+        // Fade out
+        bloom.fadeProgress = Math.max(0, bloom.fadeProgress - 1);
+        if (bloom.fadeProgress <= 0) {
+          activeBloomCenters.splice(i, 1);
+        }
+      }
+    }
+    
+    // Add new blooms from candidates
+    for (const candidate of currentBloomCandidates) {
+      const exists = activeBloomCenters.find(b => b.starIndex === candidate.starIndex);
+      
+      if (!exists && activeBloomCenters.length < MAX_BLOOM_CENTERS) {
+        activeBloomCenters.push({
+          ...candidate,
+          fadeProgress: 0,
+          bloomSize: Math.random() < 0.3 ? 'large' : 'normal' // 30% chance of large bloom
+        });
+      } else if (exists) {
+        // Update position
+        exists.x = candidate.x;
+        exists.y = candidate.y;
+        exists.intensity = candidate.intensity;
+      }
+    }
+    
+    // Cheap bloom: draw soft glows around bright star clusters (mobile-optimised)
+    if (activeBloomCenters.length > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      
+      for (const bloom of activeBloomCenters) {
+        const [r, g, b] = bloom.color;
+        
+        // Varied bloom sizes - some large, some normal, subtle
+        const baseSize = Math.min(state.w, state.h) * (bloom.bloomSize === 'large' ? 0.18 : 0.10);
+        const bloomSize = baseSize * (1 + bloom.intensity * 0.3);
+        
+        // Smooth fade based on fadeProgress
+        const fadeFactor = Math.min(1, bloom.fadeProgress / BLOOM_FADE_TIME);
+        const smoothFade = fadeFactor * fadeFactor * (3 - 2 * fadeFactor); // smoothstep
+        
+        // Single gradient per bloom - no nested loops
+        const bloomGrad = ctx.createRadialGradient(
+          bloom.x, bloom.y, 0,
+          bloom.x, bloom.y, bloomSize
+        );
+        const bloomAlpha = bloom.intensity * 0.08 * smoothFade; // subtle
+        bloomGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${bloomAlpha})`);
+        bloomGrad.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${bloomAlpha * 0.5})`);
+        bloomGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        
+        ctx.fillStyle = bloomGrad;
+        ctx.fillRect(
+          bloom.x - bloomSize,
+          bloom.y - bloomSize,
+          bloomSize * 2,
+          bloomSize * 2
+        );
+      }
+      
+      ctx.restore();
+    }
   }
 
   // Main animation loop

@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0f1c" />
+  <title>Starmatch - With Starfield Background</title>
+  <link rel="stylesheet" href="style/engine-visualiser.css">
+  <link rel="stylesheet" href="style/location-picker.css">
+  <style>
+    /* Starfield background - fixed, full screen, behind everything */
+    #starfield-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      touch-action: none;
+    }
+
+    /* Override body background to be transparent so starfield shows through */
+    body {
+      background: transparent !important;
+      padding-bottom: 2rem !important;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    main {
+      flex: 1 0 auto;
+      position: relative;
+      z-index: 1;
+      background: transparent;
+    }
+
+    /* Make titles and labels non-selectable */
+    h1, h2, h3, h4, h5, h6,
+    label,
+    small,
+    .section-header,
+    .header-title-row,
+    .mode-toggle,
+    .setting-row > label,
+    .records-header,
+    .records-footer,
+    .hint,
+    .starmatch-description {
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+
+    /* Allow pointer events to pass through transparent background areas to starfield */
+    header,
+    .input-controls,
+    .chart-visualisation,
+    .aspect-grid-section,
+    .results-container,
+    .analysis-details,
+    .starmatch-section {
+      pointer-events: none;
+    }
+
+    /* But re-enable pointer events for interactive elements */
+    header *,
+    .input-controls *,
+    .chart-visualisation *,
+    .aspect-grid-section *,
+    .results-container *,
+    .analysis-details *,
+    .starmatch-section * {
+      pointer-events: auto;
+    }
+
+    /* Header area */
+    header {
+      background: rgba(20, 25, 36, 0.2) !important;
+      backdrop-filter: blur(3px);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Make control groups more opaque for easy data input */
+    .control-group {
+      background: rgba(20, 25, 36, 0.9) !important;
+      backdrop-filter: blur(10px);
+    }
+
+    /* Input controls section */
+    .input-controls {
+      background: rgba(20, 25, 36, 0.2) !important;
+      backdrop-filter: blur(3px);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Chart visualisation with canvas */
+    .chart-visualisation {
+      background: rgba(20, 25, 36, 0.3) !important;
+      backdrop-filter: blur(2px);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .canvas-container {
+      background: rgba(10, 13, 19, 0.5) !important;
+      backdrop-filter: blur(10px);
+      padding: 1rem;
+      border-radius: 8px;
+    }
+
+    /* Aspect grid section */
+    .aspect-grid-section {
+      background: rgba(20, 25, 36, 0.7) !important;
+      backdrop-filter: blur(8px);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .aspect-grid-container {
+      background: rgba(10, 13, 19, 0.5) !important;
+      backdrop-filter: blur(10px);
+      padding: 1rem;
+      border-radius: 8px;
+    }
+
+    /* Results container sections */
+    .results-container {
+      background: rgba(20, 25, 36, 0.2) !important;
+      backdrop-filter: blur(3px);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .results-container > div {
+      background: rgba(15, 18, 26, 0.5) !important;
+      backdrop-filter: blur(10px);
+    }
+
+    /* Analysis details */
+    .analysis-details {
+      background: rgba(20, 25, 36, 0.7) !important;
+      backdrop-filter: blur(8px);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .detail-panel {
+      background: rgba(15, 18, 26, 0.5) !important;
+      backdrop-filter: blur(10px);
+    }
+
+    /* Starmatch section */
+    .starmatch-section {
+      background: rgba(20, 25, 36, 0.7) !important;
+      backdrop-filter: blur(8px);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .starmatch-container,
+    .comparison-panel {
+      background: rgba(15, 18, 26, 0.5) !important;
+      backdrop-filter: blur(10px);
+    }
+
+    /* Modals */
+    .modal-dialog {
+      background: rgba(20, 25, 36, 0.95) !important;
+      backdrop-filter: blur(12px);
+    }
+
+    /* Footer should not be fixed on this page */
+    .site-footer {
+      position: static;
+      background: rgba(5, 7, 15, 0.75);
+      backdrop-filter: blur(8px);
+    }
+  </style>
+</head>
+<body>
+  <!-- Fixed starfield background canvas -->
+  <canvas id="starfield-bg" aria-label="Animated starfield background" role="img"></canvas>
+
+  <main>
+    <header  >
+  <div class="header-title-row">
+    <h1>Starmatch</h1>
+    <button id="settings-btn" class="settings-btn" aria-label="Settings">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M12 1v6m0 6v6m0-12l-5.2 3m10.4 0L12 7m0 10l-5.2 3m10.4 0L12 17"></path>
+        <path d="M4.93 4.93l4.24 4.24m5.66 5.66l4.24 4.24m0-14.14l-4.24 4.24m-5.66 5.66l-4.24 4.24"></path>
+      </svg>
+    </button>
+  </div>
+
+      <!-- Mode Toggle -->
+      <div class="mode-toggle">
+        <button id="btn-chart-mode" class="mode-btn active">Chart Mode</button>
+        <button id="btn-starmatch-mode" class="mode-btn">Starmatch Mode</button>
+      </div>
+    </header>
+
+    <section class="input-controls">
+      <div class="control-group">
+        <h3>Birth Data Input</h3>
+        <div class="input-row">
+          <div class="input-field">
+            <label for="birth-date">Date</label>
+            <input type="date" id="birth-date" class="picker-input" value="1974-09-11">
+            <input type="text" id="birth-date-text" class="text-input" placeholder="DD MM YYYY" value="11 09 1974" style="display: none;">
+            <small id="date-range-hint" style="font-size: 0.7rem; color: #8fa8ce; margin-top: 0.25rem; display: none;"></small>
+          </div>
+          <div class="input-field">
+            <label for="birth-time">Time (Local)</label>
+            <input type="time" id="birth-time" class="picker-input" value="14:14">
+            <input type="text" id="birth-time-text" class="text-input" placeholder="HH MM" value="14 14" style="display: none;">
+            <small style="font-size: 0.7rem; color: #8fa8ce;">Timezone auto-detected from location</small>
+          </div>
+        </div>
+
+        <div class="input-row with-lookup">
+          <div class="input-field">
+            <label for="latitude">Lat</label>
+            <input type="number" id="latitude" class="picker-input" min="-90" max="90" step="0.01" value="55.9221" placeholder="55.9221">
+            <input type="text" id="latitude-text" class="text-input" placeholder="55.9221 N or -55.9221" value="55.9221 N" style="display: none;">
+          </div>
+          <div class="input-field">
+            <label for="longitude">Long</label>
+            <input type="number" id="longitude" class="picker-input" min="-180" max="180" step="0.01" value="-3.1336" placeholder="-3.1336">
+            <input type="text" id="longitude-text" class="text-input" placeholder="3.1336 W or -3.1336" value="3.1336 W" style="display: none;">
+          </div>
+          <div class="input-field">
+            <label>&nbsp;</label>
+            <button class="location-lookup-btn" id="location-lookup" title="Search for location">
+              🔍
+            </button>
+          </div>
+        </div>
+        <div id="selected-location-name" style="font-size: 0.85rem; color: #8fa8ce; margin-top: 0.5rem; min-height: 1.2em;"></div>
+        
+        <div class="action-row">
+          <button id="btn-load-records" class="mini-btn" title="Load Saved Records">Load</button>
+          <button id="btn-save-record" class="mini-btn" title="Save Current Inputs">Save</button>
+          <button id="btn-calculate" class="primary-btn">Calculate Chart</button>
+        </div>
+        <div id="records-panel" class="records-panel hidden">
+          <div class="records-header">
+            <span>Saved Records</span>
+            <button id="btn-close-records" class="icon-btn" title="Close">✕</button>
+          </div>
+          <div id="records-list" class="records-list empty">
+            <div class="empty-msg">No saved records yet.</div>
+          </div>
+          <div class="records-footer">
+            <label class="apply-settings-toggle" title="If checked, loading a record will overwrite current engine settings">
+              <input type="checkbox" id="apply-saved-settings" checked>
+              <span>Apply saved settings</span>
+            </label>
+            <button id="btn-clear-all" class="danger-btn" title="Delete All Records">Clear All</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h3>Engine Settings</h3>
+        <div class="setting-row">
+          <label for="orb-type">Orb Type</label>
+          <select id="orb-type">
+            <option value="0" selected>Aspect Orbs (Modern)</option>
+            <option value="1">Planet Orbs (Ancient)</option>
+          </select>
+        </div>
+        
+        <div class="setting-row">
+          <label for="aspect-orb-set">Aspect Orb Set</label>
+          <select id="aspect-orb-set">
+            <option value="0" selected>Default</option>
+            <option value="1">Tight</option>
+            <option value="2">Wide (Astrotheme)</option>
+            <option value="3">Medium</option>
+            <option value="4">Very Tight</option>
+          </select>
+        </div>
+        
+        <div class="setting-row">
+          <label for="rulership-set">Rulership System</label>
+          <select id="rulership-set">
+            <option value="0" selected>Ancient Rulers</option>
+            <option value="4">Modern Rulers</option>
+          </select>
+        </div>
+        
+        <div class="setting-row">
+          <label>
+            <input type="checkbox" id="precession-flag">
+            Apply Precession Correction
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="chart-visualisation">
+      <h3>Chart Wheel Visualisation</h3>
+      <div class="canvas-container">
+        <canvas id="chart-canvas" width="600" height="600"></canvas>
+        <div id="chart-tooltip" class="chart-tooltip"></div>
+      </div>
+    </section>
+
+    <section class="aspect-grid-section">
+      <h3>Aspect Grid</h3>
+      <div class="aspect-grid-container">
+        <div id="aspect-grid" class="aspect-grid">
+          <div class="loading-message">Calculate a chart to view aspect grid...</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="results-container">
+      <div class="theme-chart collapsible-section">
+        <div class="section-header">
+          <h3>Theme Values (House/Sign Emphasis)</h3>
+          <button class="collapse-toggle" data-target="theme-bars" aria-label="Toggle theme values">
+            <span class="collapse-icon">▼</span>
+          </button>
+        </div>
+        <div id="theme-bars" class="theme-bars-container">
+          <div class="loading-message">Calculate a chart to view themes...</div>
+        </div>
+      </div>
+
+      <div class="planetary-positions collapsible-section">
+        <div class="section-header">
+          <h3>Planetary Positions</h3>
+          <button class="collapse-toggle" data-target="positions-display" aria-label="Toggle planetary positions">
+            <span class="collapse-icon">▼</span>
+          </button>
+        </div>
+        <div id="positions-display" class="positions-grid collapsed">
+          <div class="loading-message">Calculate a chart to view positions...</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="analysis-details">
+      <div class="analysis-header">
+        <h3>Dominant Themes / Traditional Factors / Aspect Analysis</h3>
+        <button class="collapse-toggle" id="analysis-toggle" aria-label="Toggle analysis details">
+          <span class="collapse-icon">▼</span>
+        </button>
+      </div>
+      <div class="analysis-content" id="analysis-content">
+        <div class="detail-panel">
+          <h3>Aspect Analysis</h3>
+          <div id="aspect-counts" class="info-grid">
+            <div class="loading-message">Calculate a chart to view aspects...</div>
+          </div>
+        </div>
+
+        <div class="detail-panel">
+          <h3>Traditional Factors</h3>
+          <div id="trad-factors" class="info-grid">
+            <div class="loading-message">Calculate a chart to view factors...</div>
+          </div>
+        </div>
+
+        <div class="detail-panel">
+          <h3>Dominant Themes</h3>
+          <div id="dominant-info" class="info-grid">
+            <div class="loading-message">Calculate a chart to view dominants...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Starmatch Comparison Section (Hidden by default) -->
+    <section id="starmatch-section" class="starmatch-section hidden">
+      <div class="starmatch-container">
+        <h3>Starmatch Comparison</h3>
+        <p class="starmatch-description">
+          Compare two charts to analyse compatibility and thematic interactions.
+        </p>
+        
+        <div class="comparison-controls">
+          <div class="subject-target-row">
+            <div class="comparison-panel">
+              <h4>Subject</h4>
+              <select id="subject-select" class="record-select">
+                <option value="">-- Select Subject --</option>
+              </select>
+              <button id="btn-load-subject" class="mini-btn">Load Subject</button>
+              <div id="subject-info" class="person-info"></div>
+            </div>
+            
+            <div class="vs-divider">VS</div>
+            
+            <div class="comparison-panel">
+              <h4>Target</h4>
+              <select id="target-select" class="record-select">
+                <option value="">-- Select Target --</option>
+              </select>
+              <button id="btn-load-target" class="mini-btn">Load Target</button>
+              <div id="target-info" class="person-info"></div>
+            </div>
+          </div>
+          
+          <button id="btn-compare" class="primary-btn" disabled>Compare Charts</button>
+        </div>
+        
+        <div id="comparison-results" class="comparison-results hidden">
+          <h3>Comparison Results</h3>
+          <div id="comparison-output" class="comparison-output">
+            <!-- Results will be displayed here -->
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <div id="save-modal" class="modal hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h4>Save Record</h4>
+        <button id="modal-close" class="icon-btn" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label for="record-name-input">Name</label>
+        <input id="record-name-input" type="text" placeholder="e.g. Ada Lovelace" />
+        <div class="hint">Will store date, time, latitude, longitude, settings.</div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-save" class="primary-btn small">Save</button>
+        <button id="modal-cancel" class="mini-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div id="danger-modal" class="modal hidden">
+    <div class="modal-dialog danger">
+      <div class="modal-header">
+        <h4 id="danger-modal-title">Delete ALL Records?</h4>
+        <button id="danger-modal-close" class="icon-btn" title="Close">✕</button>
+      </div>
+      <div class="modal-body" id="danger-modal-body">
+        <p class="danger-text" id="danger-modal-text">This will permanently remove every saved record.</p>
+        <ul class="danger-list" id="danger-modal-points">
+          <li>No undo</li>
+          <li>All names and settings lost</li>
+          <li>Export first if unsure</li>
+        </ul>
+        <div class="stage-indicator" id="danger-stage-indicator">Stage 1 / 2</div>
+      </div>
+      <div class="modal-footer">
+        <button id="danger-cancel" class="mini-btn">Cancel</button>
+        <button id="danger-confirm" class="danger-btn large">Yes, Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h4>Settings</h4>
+        <button class="icon-btn" id="settings-close" aria-label="Close settings">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="use-text-inputs" class="setting-checkbox">
+            <span class="setting-text">Use text input mode (instead of specialised pickers)</span>
+          </label>
+          <p class="setting-description">When enabled, all date/time/location inputs will be plain text fields instead of specialised picker controls.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Starfield script - loaded first for background -->
+  <script>
+    // Inline starfield script with modified canvas ID
+    (function() {
+      'use strict';
+      
+      const canvas = document.getElementById('starfield-bg');
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d', { 
+        alpha: false,
+        desynchronized: true
+      });
+
+      const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+      
+      const activeBloomCenters = [];
+      const MAX_BLOOM_CENTERS = 12;
+      const BLOOM_FADE_TIME = 240;
+      
+      const state = {
+        w: 0, 
+        h: 0, 
+        time: 0,
+        stars: [],
+        constellationLinks: [],
+        attractors: [],
+        pointer: { x: 0, y: 0, active: false },
+        maxLinkLifetime: 240,
+      };
+
+      function resizeCanvas() {
+        const { innerWidth, innerHeight } = window;
+        state.w = innerWidth;
+        state.h = innerHeight;
+        
+        canvas.style.width = `${state.w}px`;
+        canvas.style.height = `${state.h}px`;
+        canvas.width = Math.floor(state.w * DPR);
+        canvas.height = Math.floor(state.h * DPR);
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        
+        // Clear constellation links on resize
+        state.constellationLinks = [];
+        
+        initializeStarfield();
+      }
+
+      const starColors = [
+        { name: 'Deep Purple', color: [180, 120, 255], weight: 0.12 },
+        { name: 'Magenta', color: [255, 100, 200], weight: 0.10 },
+        { name: 'Electric Blue', color: [120, 180, 255], weight: 0.15 },
+        { name: 'Cyan', color: [100, 220, 255], weight: 0.12 },
+        { name: 'Golden', color: [255, 220, 100], weight: 0.15 },
+        { name: 'Amber', color: [255, 180, 80], weight: 0.10 },
+        { name: 'Emerald', color: [120, 255, 180], weight: 0.08 },
+        { name: 'Lime', color: [180, 255, 120], weight: 0.06 },
+        { name: 'Coral', color: [255, 140, 120], weight: 0.08 },
+        { name: 'Rose', color: [255, 160, 200], weight: 0.04 },
+      ];
+
+      function getStarColor() {
+        const rand = Math.random();
+        let cumulative = 0;
+        for (const star of starColors) {
+          cumulative += star.weight;
+          if (rand < cumulative) return star.color;
+        }
+        return starColors[2].color;
+      }
+
+      const starSprites = [];
+      const spriteSizes = [0.4, 0.8, 1.2, 1.8, 2.5, 3.5, 5.0];
+      
+      function createStarSprite(size, color) {
+        const canvas = document.createElement('canvas');
+        const padding = 12;
+        const canvasSize = (size + padding) * 2 * DPR;
+        
+        canvas.width = canvas.height = canvasSize;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(DPR, DPR);
+        ctx.translate(size + padding, size + padding);
+        
+        const [r, g, b] = color;
+        
+        if (size <= 0.5) {
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
+          ctx.fillRect(-0.3, -0.3, 0.6, 0.6);
+          
+          const tinyGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 3);
+          tinyGlow.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.8)`);
+          tinyGlow.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.3)`);
+          tinyGlow.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+          
+          ctx.fillStyle = tinyGlow;
+          ctx.beginPath();
+          ctx.arc(0, 0, size * 3, 0, Math.PI * 2);
+          ctx.fill();
+          
+          return { 
+            canvas, 
+            offset: size + padding,
+            size: size
+          };
+        }
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+        ctx.fillRect(-0.6, -0.6, 1.2, 1.2);
+        
+        const innerGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.8);
+        innerGlow.addColorStop(0, `rgba(255, 255, 255, 0.95)`);
+        innerGlow.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, 0.85)`);
+        innerGlow.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, 0.4)`);
+        innerGlow.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        
+        ctx.fillStyle = innerGlow;
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        const outerGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 2);
+        outerGlow.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.6)`);
+        outerGlow.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, 0.25)`);
+        outerGlow.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        
+        ctx.fillStyle = outerGlow;
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        if (size > 2) {
+          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.6)`;
+          ctx.lineWidth = 0.6;
+          ctx.lineCap = 'round';
+          
+          const spikeLength = size * 2.5;
+          
+          ctx.beginPath();
+          ctx.moveTo(0, -spikeLength);
+          ctx.lineTo(0, spikeLength);
+          ctx.moveTo(-spikeLength, 0);
+          ctx.lineTo(spikeLength, 0);
+          ctx.stroke();
+          
+          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.35)`;
+          ctx.beginPath();
+          const diagLen = spikeLength * 0.7;
+          ctx.moveTo(-diagLen * 0.7, -diagLen * 0.7);
+          ctx.lineTo(diagLen * 0.7, diagLen * 0.7);
+          ctx.moveTo(-diagLen * 0.7, diagLen * 0.7);
+          ctx.lineTo(diagLen * 0.7, -diagLen * 0.7);
+          ctx.stroke();
+        }
+        
+        return { 
+          canvas, 
+          offset: size + padding,
+          size: size
+        };
+      }
+
+      function initializeSpriteLibrary() {
+        starSprites.length = 0;
+        for (const size of spriteSizes) {
+          for (const colorDef of starColors) {
+            starSprites.push({
+              sprite: createStarSprite(size, colorDef.color),
+              color: colorDef.color,
+              colorName: colorDef.name,
+              size: size
+            });
+          }
+        }
+      }
+
+      initializeSpriteLibrary();
+
+      function initializeStarfield() {
+        state.stars = [];
+        
+        const area = state.w * state.h;
+        
+        const sizeDistribution = [
+          { sizeIndex: 0, size: 0.4, weight: 8 },
+          { sizeIndex: 1, size: 0.8, weight: 7 },
+          { sizeIndex: 2, size: 1.2, weight: 3 },
+          { sizeIndex: 3, size: 1.8, weight: 2 },
+          { sizeIndex: 4, size: 2.5, weight: .5 },
+          { sizeIndex: 5, size: 3.5, weight: .1 },
+          { sizeIndex: 6, size: 5.0, weight: .03 },
+        ];
+        
+        const totalWeight = sizeDistribution.reduce((sum, s) => sum + s.weight, 0);
+        
+        for (const sizeDef of sizeDistribution) {
+          const starsOfThisSize = Math.floor((area / 800) * (sizeDef.weight / totalWeight));
+          
+          for (let i = 0; i < starsOfThisSize; i++) {
+            const spritesInSize = starSprites.filter(s => s.size === spriteSizes[sizeDef.sizeIndex]);
+            const chosenSprite = spritesInSize[Math.floor(Math.random() * spritesInSize.length)];
+            
+            const spawnX = Math.random() * state.w;
+            const spawnY = Math.random() * state.h;
+            
+            state.stars.push({
+              x: spawnX,
+              y: spawnY,
+              homeX: spawnX,
+              homeY: spawnY,
+              maxDrift: 20 + Math.random() * 40,
+              vx: (Math.random() - 0.5) * 0.05,
+              vy: (Math.random() - 0.5) * 0.05,
+              spriteData: chosenSprite,
+              baseBrightness: 0.5 + Math.random() * 0.5,
+              twinklePhase: Math.random() * Math.PI * 2,
+              twinkleSpeed: 0.02 + Math.random() * 0.06,
+              twinkleIntensity: 0.5 + Math.random() * 0.15,
+              returnStrength: 0.5 + Math.random() * 1.5,
+            });
+          }
+        }
+
+        state.attractors = [];
+        const attractorCount = 3 + Math.floor(Math.random() * 2);
+        
+        for (let i = 0; i < attractorCount; i++) {
+          const centerX = 0.2 * state.w + Math.random() * 0.6 * state.w;
+          const centerY = 0.2 * state.h + Math.random() * 0.6 * state.h;
+          
+          state.attractors.push({
+            centerX,
+            centerY,
+            phase: Math.random() * Math.PI * 2,
+            orbitRadius: Math.min(state.w, state.h) * (0.2 + Math.random() * 0.4),
+            angularSpeed: (Math.random() < 0.5 ? -1 : 1) * (0.00005 + Math.random() * 0.0001),
+            pullStrength: 3 + Math.random() * 5,
+            frequencyX: 0.6 + Math.random() * 0.8,
+            frequencyY: 0.7 + Math.random() * 0.9,
+            x: 0,
+            y: 0,
+          });
+        }
+      }
+
+      canvas.addEventListener('pointerdown', (e) => {
+        state.pointer.active = true;
+        const rect = canvas.getBoundingClientRect();
+        state.pointer.x = (e.clientX - rect.left);
+        state.pointer.y = (e.clientY - rect.top);
+      }, { passive: true });
+
+      canvas.addEventListener('pointermove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        state.pointer.x = (e.clientX - rect.left);
+        state.pointer.y = (e.clientY - rect.top);
+      }, { passive: true });
+
+      // Also listen on window for pointer events since canvas is behind UI
+      window.addEventListener('pointerdown', (e) => {
+        state.pointer.active = true;
+        state.pointer.x = e.clientX;
+        state.pointer.y = e.clientY;
+      }, { passive: true });
+
+      window.addEventListener('pointermove', (e) => {
+        state.pointer.x = e.clientX;
+        state.pointer.y = e.clientY;
+      }, { passive: true });
+
+      window.addEventListener('pointerup', () => {
+        state.pointer.active = false;
+      }, { passive: true });
+
+      function createConstellationLinks() {
+        const stars = state.stars;
+        if (stars.length < 3) return;
+        
+        const weightedStars = stars.map((star, index) => ({
+          index,
+          star,
+          weight: Math.pow(star.spriteData.size, 2.5)
+        }));
+        
+        const totalWeight = weightedStars.reduce((sum, s) => sum + s.weight, 0);
+        let rand = Math.random() * totalWeight;
+        let centerIdx = 0;
+        
+        for (const ws of weightedStars) {
+          rand -= ws.weight;
+          if (rand <= 0) {
+            centerIdx = ws.index;
+            break;
+          }
+        }
+        
+        const center = stars[centerIdx];
+        
+        const maxDistance = Math.min(state.w, state.h) * 0.30;
+        const maxLineLength = maxDistance * 0.5;
+        const candidates = [];
+        
+        for (let i = 0; i < stars.length; i++) {
+          if (i === centerIdx) continue;
+          
+          const dx = stars[i].x - center.x;
+          const dy = stars[i].y - center.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist < maxDistance && dist > 20) {
+            const sizeWeight = stars[i].spriteData.size;
+            candidates.push({ 
+              index: i, 
+              dist, 
+              x: stars[i].x, 
+              y: stars[i].y,
+              size: stars[i].spriteData.size,
+              weight: (sizeWeight * 2) / dist
+            });
+          }
+          
+          if (candidates.length > 30) break;
+        }
+        
+        if (candidates.length < 2) return;
+        
+        candidates.sort((a, b) => b.weight - a.weight);
+        
+        const patternSize = 6 + Math.floor(Math.random() * 10);
+        const usedStars = [centerIdx];
+        const patternStars = [{ index: centerIdx, x: center.x, y: center.y }];
+        const connections = [];
+        
+        let attemptsLeft = patternSize * 3;
+        
+        while (patternStars.length < patternSize && attemptsLeft > 0) {
+          attemptsLeft--;
+          
+          const branchFrom = patternStars[Math.floor(Math.random() * patternStars.length)];
+          
+          const existingConnections = connections.filter(c => 
+            c.starA === branchFrom.index || c.starB === branchFrom.index
+          );
+          
+          if (existingConnections.length >= 2) continue;
+          
+          let bestCandidate = null;
+          let bestScore = -1;
+          
+          for (const candidate of candidates) {
+            if (usedStars.includes(candidate.index)) continue;
+            
+            const dx = candidate.x - branchFrom.x;
+            const dy = candidate.y - branchFrom.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < maxLineLength && dist > 20) {
+              let angleOK = true;
+              
+              for (const conn of existingConnections) {
+                const otherStarIdx = conn.starA === branchFrom.index ? conn.starB : conn.starA;
+                const otherStar = patternStars.find(s => s.index === otherStarIdx);
+                
+                if (otherStar) {
+                  const v1x = otherStar.x - branchFrom.x;
+                  const v1y = otherStar.y - branchFrom.y;
+                  const v2x = candidate.x - branchFrom.x;
+                  const v2y = candidate.y - branchFrom.y;
+                  
+                  const dot = v1x * v2x + v1y * v2y;
+                  const mag1 = Math.sqrt(v1x * v1x + v1y * v1y);
+                  const mag2 = Math.sqrt(v2x * v2x + v2y * v2y);
+                  const cosAngle = dot / (mag1 * mag2);
+                  
+                  if (cosAngle > 0.5) {
+                    angleOK = false;
+                    break;
+                  }
+                }
+              }
+              
+              if (!angleOK) continue;
+              
+              let createsTriangle = false;
+              for (let i = 0; i < patternStars.length - 1; i++) {
+                for (let j = i + 1; j < patternStars.length; j++) {
+                  const star1 = patternStars[i];
+                  const star2 = patternStars[j];
+                  
+                  const alreadyConnected = connections.some(c =>
+                    (c.starA === star1.index && c.starB === star2.index) ||
+                    (c.starB === star1.index && c.starA === star2.index)
+                  );
+                  
+                  if (alreadyConnected) {
+                    const dist1 = Math.sqrt(
+                      (candidate.x - star1.x) ** 2 + (candidate.y - star1.y) ** 2
+                    );
+                    const dist2 = Math.sqrt(
+                      (candidate.x - star2.x) ** 2 + (candidate.y - star2.y) ** 2
+                    );
+                    
+                    if (dist1 < maxLineLength * 0.8 && dist2 < maxLineLength * 0.8) {
+                      createsTriangle = true;
+                      break;
+                    }
+                  }
+                }
+                if (createsTriangle) break;
+              }
+              
+              if (createsTriangle) continue;
+              
+              const sizeBonus = candidate.size * 0.5;
+              const score = candidate.weight * (1 - dist / maxLineLength) + sizeBonus;
+              
+              if (score > bestScore) {
+                bestScore = score;
+                bestCandidate = { ...candidate, dist };
+              }
+            }
+          }
+          
+          if (bestCandidate) {
+            connections.push({
+              starA: branchFrom.index,
+              starB: bestCandidate.index,
+              lifetime: 140 + Math.floor(Math.random() * 120),
+              pulsePhase: Math.random() * Math.PI * 2,
+            });
+            
+            usedStars.push(bestCandidate.index);
+            patternStars.push(bestCandidate);
+          }
+        }
+        
+        state.constellationLinks.push(...connections);
+        
+        if (state.constellationLinks.length > 150) {
+          state.constellationLinks.splice(0, state.constellationLinks.length - 150);
+        }
+      }
+
+      let nextConstellationTime = 0;
+
+      function updatePhysics(deltaTime) {
+        const stars = state.stars;
+        const attractors = state.attractors;
+
+        for (let i = 0; i < attractors.length; i++) {
+          const att = attractors[i];
+          att.phase += att.angularSpeed * deltaTime;
+          
+          att.x = att.centerX + Math.cos(att.phase * att.frequencyX) * att.orbitRadius;
+          att.y = att.centerY + Math.sin(att.phase * att.frequencyY) * att.orbitRadius;
+        }
+
+        for (let i = 0; i < stars.length; i++) {
+          const star = stars[i];
+          let forceX = 0;
+          let forceY = 0;
+
+          const dxHome = star.homeX - star.x;
+          const dyHome = star.homeY - star.y;
+          const distFromHome = Math.sqrt(dxHome * dxHome + dyHome * dyHome);
+          
+          if (distFromHome > star.maxDrift) {
+            const overshoot = distFromHome - star.maxDrift;
+            const restoreForce = overshoot * star.returnStrength * 0.5;
+            const invDist = 1 / (distFromHome + 1);
+            forceX += dxHome * invDist * restoreForce;
+            forceY += dyHome * invDist * restoreForce;
+          } else {
+            const pullBack = star.returnStrength * 0.05;
+            forceX += dxHome * pullBack;
+            forceY += dyHome * pullBack;
+          }
+
+          for (let j = 0; j < attractors.length; j++) {
+            const att = attractors[j];
+            const dx = att.x - star.x;
+            const dy = att.y - star.y;
+            const distSquared = dx * dx + dy * dy + 10000;
+            const invDist = 1 / Math.sqrt(distSquared);
+            const forceMag = att.pullStrength * invDist * invDist * 0.03;
+            
+            forceX += dx * forceMag;
+            forceY += dy * forceMag;
+          }
+          
+          const turbulence = Math.sin(state.time * 0.0003 + i * 0.1) * 0.01;
+          forceX += turbulence;
+          forceY += Math.cos(state.time * 0.0004 + i * 0.15) * 0.01;
+
+          if (state.pointer.active) {
+            const dx = state.pointer.x - star.x;
+            const dy = state.pointer.y - star.y;
+            const distSquared = dx * dx + dy * dy + 200;
+            const invDist = 1 / Math.sqrt(distSquared);
+            const forceMag = 20 * invDist * invDist;
+            
+            forceX += dx * forceMag;
+            forceY += dy * forceMag;
+          }
+
+          const damping = 0.97;
+          star.vx = (star.vx + forceX * deltaTime * 0.008) * damping;
+          star.vy = (star.vy + forceY * deltaTime * 0.008) * damping;
+          
+          star.x += star.vx * deltaTime * 0.008;
+          star.y += star.vy * deltaTime * 0.008;
+
+          if (star.x < -100) star.x = state.w + 100;
+          else if (star.x > state.w + 100) star.x = -100;
+          
+          if (star.y < -100) star.y = state.h + 100;
+          else if (star.y > state.h + 100) star.y = -100;
+
+          star.twinklePhase += star.twinkleSpeed * deltaTime * 0.002;
+        }
+
+        nextConstellationTime -= deltaTime;
+        if (nextConstellationTime <= 0) {
+          createConstellationLinks();
+          nextConstellationTime = 700 + Math.random() * 1100;
+        }
+
+        for (let i = state.constellationLinks.length - 1; i >= 0; i--) {
+          const link = state.constellationLinks[i];
+          link.lifetime--;
+          
+          if (link.lifetime <= 0) {
+            state.constellationLinks.splice(i, 1);
+          }
+        }
+      }
+
+      function render() {
+        ctx.fillStyle = '#070a14';
+        ctx.fillRect(0, 0, state.w, state.h);
+
+        const nebula1 = ctx.createRadialGradient(
+          state.w * 0.75, state.h * 0.25, 20,
+          state.w * 0.75, state.h * 0.25, Math.max(state.w, state.h) * 0.8
+        );
+        nebula1.addColorStop(0, 'rgba(80, 130, 255, 0.06)');
+        nebula1.addColorStop(0.5, 'rgba(60, 100, 200, 0.02)');
+        nebula1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        
+        ctx.fillStyle = nebula1;
+        ctx.fillRect(0, 0, state.w, state.h);
+
+        const nebula2 = ctx.createRadialGradient(
+          state.w * 0.2, state.h * 0.7, 20,
+          state.w * 0.2, state.h * 0.7, Math.max(state.w, state.h) * 0.6
+        );
+        nebula2.addColorStop(0, 'rgba(100, 80, 180, 0.04)');
+        nebula2.addColorStop(0.6, 'rgba(70, 50, 120, 0.015)');
+        nebula2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        
+        ctx.fillStyle = nebula2;
+        ctx.fillRect(0, 0, state.w, state.h);
+
+        const currentBloomCandidates = [];
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.lineCap = 'round';
+        
+        for (let i = 0; i < state.constellationLinks.length; i++) {
+          const link = state.constellationLinks[i];
+          const starA = state.stars[link.starA];
+          const starB = state.stars[link.starB];
+          
+          if (!starA || !starB) continue;
+          
+          const lifeFraction = link.lifetime / state.maxLinkLifetime;
+          
+          const fadeIn = lifeFraction > 0.7 ? Math.min(1, (1 - lifeFraction) / 0.3) : 1;
+          const fadeOut = lifeFraction < 0.4 ? Math.min(1, lifeFraction / 0.4) : 1;
+          const fade = Math.min(fadeIn, fadeOut);
+          const smoothFade = fade * fade * (3 - 2 * fade);
+          
+          const pulse = 0.85 + 0.15 * (0.5 + 0.5 * Math.sin(link.pulsePhase + state.time * 0.008));
+          const alpha = 0.18 * smoothFade * pulse;
+          
+          ctx.strokeStyle = `rgba(170, 220, 255, ${alpha})`;
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.moveTo(starA.x, starA.y);
+          ctx.lineTo(starB.x, starB.y);
+          ctx.stroke();
+        }
+        
+        ctx.restore();
+
+        for (let i = 0; i < state.stars.length; i++) {
+          const star = state.stars[i];
+          
+          const twinkleValue = Math.sin(star.twinklePhase);
+          const twinkleModulation = 1.0 + (twinkleValue * star.twinkleIntensity);
+          const brightness = star.baseBrightness * twinkleModulation;
+          const alpha = Math.max(0.3, Math.min(1.0, brightness));
+          
+          if (star.spriteData.size > 2.0 && brightness > 0.7 && currentBloomCandidates.length < MAX_BLOOM_CENTERS * 2) {
+            currentBloomCandidates.push({
+              x: star.x,
+              y: star.y,
+              color: star.spriteData.color,
+              size: star.spriteData.size,
+              intensity: brightness * (star.spriteData.size / 5.0),
+              starIndex: i
+            });
+          }
+          
+          const sprite = star.spriteData.sprite;
+          ctx.globalAlpha = alpha;
+          ctx.drawImage(
+            sprite.canvas,
+            star.x - sprite.offset,
+            star.y - sprite.offset
+          );
+        }
+        
+        ctx.globalAlpha = 1;
+        
+        for (let i = activeBloomCenters.length - 1; i >= 0; i--) {
+          const bloom = activeBloomCenters[i];
+          
+          const stillActive = currentBloomCandidates.some(c => c.starIndex === bloom.starIndex);
+          
+          if (stillActive) {
+            bloom.fadeProgress = Math.min(BLOOM_FADE_TIME, bloom.fadeProgress + 2);
+          } else {
+            bloom.fadeProgress = Math.max(0, bloom.fadeProgress - 1);
+            if (bloom.fadeProgress <= 0) {
+              activeBloomCenters.splice(i, 1);
+            }
+          }
+        }
+        
+        for (const candidate of currentBloomCandidates) {
+          const exists = activeBloomCenters.find(b => b.starIndex === candidate.starIndex);
+          
+          if (!exists && activeBloomCenters.length < MAX_BLOOM_CENTERS) {
+            activeBloomCenters.push({
+              ...candidate,
+              fadeProgress: 0,
+              bloomSize: Math.random() < 0.3 ? 'large' : 'normal'
+            });
+          } else if (exists) {
+            exists.x = candidate.x;
+            exists.y = candidate.y;
+            exists.intensity = candidate.intensity;
+          }
+        }
+        
+        if (activeBloomCenters.length > 0) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'screen';
+          
+          for (const bloom of activeBloomCenters) {
+            const [r, g, b] = bloom.color;
+            
+            const baseSize = Math.min(state.w, state.h) * (bloom.bloomSize === 'large' ? 0.18 : 0.10);
+            const bloomSize = baseSize * (1 + bloom.intensity * 0.3);
+            
+            const fadeFactor = Math.min(1, bloom.fadeProgress / BLOOM_FADE_TIME);
+            const smoothFade = fadeFactor * fadeFactor * (3 - 2 * fadeFactor);
+            
+            const bloomGrad = ctx.createRadialGradient(
+              bloom.x, bloom.y, 0,
+              bloom.x, bloom.y, bloomSize
+            );
+            const bloomAlpha = bloom.intensity * 0.08 * smoothFade;
+            bloomGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${bloomAlpha})`);
+            bloomGrad.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${bloomAlpha * 0.5})`);
+            bloomGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+            
+            ctx.fillStyle = bloomGrad;
+            ctx.fillRect(
+              bloom.x - bloomSize,
+              bloom.y - bloomSize,
+              bloomSize * 2,
+              bloomSize * 2
+            );
+          }
+          
+          ctx.restore();
+        }
+      }
+
+      let lastFrameTime = performance.now();
+      
+      function animationLoop(currentTime) {
+        const deltaTime = Math.min(50, currentTime - lastFrameTime);
+        lastFrameTime = currentTime;
+        
+        state.time += deltaTime;
+        updatePhysics(deltaTime);
+        render();
+        
+        requestAnimationFrame(animationLoop);
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+      requestAnimationFrame(animationLoop);
+    })();
+  </script>
+
+  <!-- Include dependencies -->
+  <script src="script/input-parsers.js"></script>
+  <script src="script/input-manager.js"></script>
+  <script src="script/test/test-harness.js"></script>
+  <script src="script/constants.js"></script>
+  <script src="script/test/constants.test.js"></script>
+  <script src="script/storage-manager.js"></script>
+  <script src="script/migrate-storage.js"></script>
+  <script src="script/test/storage-manager.test.js"></script>
+  <script src="script/astronomical-calculations.js"></script>
+  <script src="script/test/astronomical-calculations.test.js"></script>
+  <script src="script/chart-renderer.js"></script>
+  <script src="script/test/chart-renderer.test.js"></script>
+  <script src="script/ui-manager.js"></script>
+  <script src="script/test/ui-manager.test.js"></script>
+  <script src="script/zodiac-utils.js"></script>
+  <script src="script/test/zodiac-utils.test.js"></script>
+  <script src="script/aspect-grid.js"></script>
+  <script src="script/spectrum-displays.js"></script>
+  <script src="script/comparison-chart-renderer.js"></script>
+  <script src="script/comparison-ui.js"></script>
+  <script src="script/engine.js"></script>
+  <script src="script/location-picker.js"></script>
+  <script src="script/timezone-helper.js"></script>
+  <script src="script/starmatch-visualiser.js"></script>
+  <script src="script/comparison-engine.js"></script>
+  <script src="script/test/comparison-engine.test.js"></script>
+  <script src="script/self-test.js"></script>
+  
+  <footer class="site-footer" role="contentinfo">
+    <a href="privacy.html" aria-label="Read the privacy policy">Privacy</a>
+  </footer>
+</body>
+</html>
