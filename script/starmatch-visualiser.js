@@ -563,7 +563,8 @@ function applyRecord(rec, doCalculate=false, includeSettings=true) {
   if (includeSettings) {
     orbTypeSelect.value = rec.orbType || '0';
     aspectOrbSetSelect.value = rec.aspectOrbSet || '0';
-    traditionalFactorsSelect.value = rec.traditionalFactors || '0';
+    // Support both old and new property names for backward compatibility
+    traditionalFactorsSelect.value = rec.traditionalFactors || rec.rulershipSet || '0';
     precessionCheckbox.checked = rec.precession === 1;
   }
   if (doCalculate) {
