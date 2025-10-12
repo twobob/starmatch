@@ -373,9 +373,8 @@ function displayPositions(positions, ascendant, midheaven) {
   positionsDisplay.innerHTML = '';
 
   const allPositions = {
-    ...positions,
-    'Ascendant': ascendant
-    // Midheaven removed from planetary positions display
+    ...positions
+    // Ascendant and Midheaven removed from planetary positions display
   };
 
   for (const [name, longitude] of Object.entries(allPositions)) {
