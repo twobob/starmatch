@@ -4,7 +4,7 @@ const ChartRenderer = (function() {
   // Convert zodiac longitude to canvas angle (in radians)
   // This is the SINGLE SOURCE OF TRUTH for longitude→angle conversion (counter-clockwise)
   function longitudeToCanvasAngle(longitude, ascendant) {
-    return (((180 + ascendant - longitude) % 360) * Math.PI) / 180;
+    return (((180 + ascendant + AstroConstants.ZODIAC_ROTATION_OFFSET - longitude) % 360) * Math.PI) / 180;
   }
 
   function calculatePlanetPositionsWithCollisionDetection(positions, ascendant, centerX, centerY, baseRadius, collisionThreshold = 25, stackOffset = 15) {
@@ -173,7 +173,7 @@ const ChartRenderer = (function() {
       return AstroConstants.ELEMENT_COLOURS[element];
     };
 
-    const offset = 180 + ascendant;
+    const offset = 180 + ascendant + AstroConstants.ZODIAC_ROTATION_OFFSET;
     for (let i = 0; i < 12; i++) {
       const segmentLongitude = (i * 30) % 360;
       const startDeg = (-segmentLongitude + offset) % 360;

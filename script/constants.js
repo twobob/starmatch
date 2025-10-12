@@ -58,6 +58,15 @@ const AstroConstants = {
     'Pisces': 'Neptune'
   },
   
+  // Zodiac wheel rotation offset (degrees) to align signs with ascendant line
+  ZODIAC_ROTATION_OFFSET: 13,
+  
+  // Zodiac wheel rotation offset for comparison chart only
+  COMPARISON_ZODIAC_ROTATION_OFFSET: 0,
+  
+  // Show ascendant tooltips in comparison chart (sign, degree, element info)
+  SHOW_ASCENDANT_TOOLTIPS_IN_COMPARISON: false,
+  
   // Chart configuration
   MAIN_CHART_CONFIG: {
     outerRadius: 280,

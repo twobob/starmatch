@@ -21,7 +21,7 @@ const ComparisonChartRenderer = (function() {
     // Draw zodiac wheel using subject's ascendant
     ChartRenderer.drawZodiacWheelOnCanvas(compCtx, centerX, centerY, outerRadius, innerRadius, subjectAsc, true);
     
-    // Calculate positions with collision detection for both
+    // Calculate positions with collision detection for both (using original ascendant for planets)
     const subjectPlanetsArray = ChartRenderer.calculatePlanetPositionsWithCollisionDetection(
       subjectPos, subjectAsc, centerX, centerY, innerRadius - 20, 22, 12
     );
@@ -128,7 +128,8 @@ const ComparisonChartRenderer = (function() {
     if (diff < 0) diff += 360;
     
     // Convert to canvas angle: start at 180° (9 o'clock) and subtract the difference
-    const targetAscAngle = ((180 - diff) * Math.PI) / 180;
+    // Apply COMPARISON_ZODIAC_ROTATION_OFFSET to align with rotated zodiac wheel
+    const targetAscAngle = ((180 - diff + AstroConstants.COMPARISON_ZODIAC_ROTATION_OFFSET) * Math.PI) / 180;
     
     compCtx.beginPath();
     compCtx.moveTo(centerX, centerY);
@@ -273,7 +274,7 @@ const ComparisonChartRenderer = (function() {
       // The zodiac wheel is rotated so subject's ascendant is at 9 o'clock (180°)
       let diff = targetAsc - subjectAsc;
       if (diff < 0) diff += 360;
-      const targetAscAngle = ((180 - diff) * Math.PI) / 180;
+      const targetAscAngle = ((180 - diff + AstroConstants.COMPARISON_ZODIAC_ROTATION_OFFSET) * Math.PI) / 180;
       
       compCtx.globalAlpha = targetPlanetOpacity;
       compCtx.beginPath();
@@ -379,8 +380,16 @@ const ComparisonChartRenderer = (function() {
       );
       
       if (distToSubjectAsc <= 5) {
-        const { signName, degree } = getSignInfo(compChartData.subjectAsc);
-        const signIndex = getSignIndexFromLongitude(compChartData.subjectAsc);
+        if (!AstroConstants.SHOW_ASCENDANT_TOOLTIPS_IN_COMPARISON) {
+          return {
+            type: 'subject-ascendant',
+            person: currentSubject.name
+          };
+        }
+        // Adjust for zodiac wheel rotation when displaying tooltip
+        const adjustedAsc = (compChartData.subjectAsc - AstroConstants.ZODIAC_ROTATION_OFFSET + 360) % 360;
+        const { signName, degree } = getSignInfo(adjustedAsc);
+        const signIndex = getSignIndexFromLongitude(adjustedAsc);
         const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
         const quality = AstroConstants.QUALITY_NAMES[Math.floor(signIndex / 4)];
         const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
@@ -397,7 +406,7 @@ const ComparisonChartRenderer = (function() {
       // Target ascendant (purple) - offset from subject's 9 o'clock position
       let diff = compChartData.targetAsc - compChartData.subjectAsc;
       if (diff < 0) diff += 360;
-      const targetAscAngle = ((180 - diff) * Math.PI) / 180;
+      const targetAscAngle = ((180 - diff + AstroConstants.COMPARISON_ZODIAC_ROTATION_OFFSET) * Math.PI) / 180;
       const targetAscX = centerX + Math.cos(targetAscAngle) * innerRadius;
       const targetAscY = centerY + Math.sin(targetAscAngle) * innerRadius;
       
@@ -406,6 +415,12 @@ const ComparisonChartRenderer = (function() {
       );
       
       if (distToTargetAsc <= 5) {
+        if (!AstroConstants.SHOW_ASCENDANT_TOOLTIPS_IN_COMPARISON) {
+          return {
+            type: 'target-ascendant',
+            person: currentTarget.name
+          };
+        }
         const { signName, degree } = getSignInfo(compChartData.targetAsc);
         const signIndex = getSignIndexFromLongitude(compChartData.targetAsc);
         const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
@@ -432,7 +447,8 @@ const ComparisonChartRenderer = (function() {
       if (distance >= compChartData.innerRadius && distance <= compChartData.outerRadius) {
         let angle_rad = Math.atan2(dy, dx);
         let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
-        let zodiacLon = ((-canvas_angle - 180 + compChartData.subjectAsc) % 360 + 360) % 360;
+        // Account for the comparison chart rotation offset
+        let zodiacLon = ((-canvas_angle - 180 + compChartData.subjectAsc + AstroConstants.COMPARISON_ZODIAC_ROTATION_OFFSET) % 360 + 360) % 360;
         
         const signIndex = getSignIndexFromLongitude(zodiacLon);
         const signName = AstroConstants.SIGN_NAMES[signIndex];
@@ -555,17 +571,29 @@ const ComparisonChartRenderer = (function() {
             <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>${hoverInfo.isRuling ? '<div style="font-size: 0.8rem; color: #ffd700; margin-top: 0.25rem;">⚡ Ruling Planet</div>' : ''}
           `;
         } else if (hoverInfo.type === 'subject-ascendant') {
-          tooltipHTML = `
-            <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">ASCENDANT (${hoverInfo.person})</div>
-            <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.sign} ${hoverInfo.degree.toFixed(2)}°</div>
-            <div style="font-size: 0.75rem; color: #8fa8ce; margin-top: 0.25rem;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>
-          `;
+          if (hoverInfo.degree !== undefined) {
+            tooltipHTML = `
+              <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">ASCENDANT (${hoverInfo.person})</div>
+              <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.sign} ${hoverInfo.degree.toFixed(2)}°</div>
+              <div style="font-size: 0.75rem; color: #8fa8ce; margin-top: 0.25rem;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>
+            `;
+          } else {
+            tooltipHTML = `
+              <div style="font-weight: 600; color: #74c0fc;">ASCENDANT (${hoverInfo.person})</div>
+            `;
+          }
         } else if (hoverInfo.type === 'target-ascendant') {
-          tooltipHTML = `
-            <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">ASCENDANT (${hoverInfo.person})</div>
-            <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.sign} ${hoverInfo.degree.toFixed(2)}°</div>
-            <div style="font-size: 0.75rem; color: #8fa8ce; margin-top: 0.25rem;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>
-          `;
+          if (hoverInfo.degree !== undefined) {
+            tooltipHTML = `
+              <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">ASCENDANT (${hoverInfo.person})</div>
+              <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.sign} ${hoverInfo.degree.toFixed(2)}°</div>
+              <div style="font-size: 0.75rem; color: #8fa8ce; margin-top: 0.25rem;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>
+            `;
+          } else {
+            tooltipHTML = `
+              <div style="font-weight: 600; color: #b85eff;">ASCENDANT (${hoverInfo.person})</div>
+            `;
+          }
         } else if (hoverInfo.type === 'aspect') {
           tooltipHTML = `
             <div style="font-weight: 600; color: ${hoverInfo.color}; margin-bottom: 0.5rem;">${hoverInfo.aspectType} (${hoverInfo.person})</div>

@@ -258,7 +258,9 @@ const UIManager = (function() {
     const distance = distanceToLineSegment(mouseX, mouseY, x1, y1, x2, y2);
     
     if (distance <= 8) {
-      const { signName, degree } = getSignInfo(chartData.ascendant);
+      // Adjust for zodiac wheel rotation when displaying tooltip
+      const adjustedAsc = (chartData.ascendant - AstroConstants.ZODIAC_ROTATION_OFFSET + 360) % 360;
+      const { signName, degree } = getSignInfo(adjustedAsc);
       
       return {
         type: 'ascendant',

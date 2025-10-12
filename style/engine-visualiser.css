@@ -720,8 +720,8 @@ h3 {
 /* Results Container */
 .results-container {
   margin-top: 2rem;
-  display: grid;
-  grid-template-columns: 1fr 1.5fr;
+  display: flex;
+  flex-direction: column;
   gap: 2rem;
 }
 
@@ -763,6 +763,7 @@ h3 {
 
 /* Aspect Grid Section */
 .aspect-grid-section {
+  display: none;
   margin-top: 2rem;
   background: rgba(10, 13, 19, 0.5);
   padding: 1.5rem;
