@@ -727,12 +727,14 @@ function populateComparisonSelects() {
   const records = loadRecords();
   const escape = UIManager.escapeHtml;
   const options = records.map(r => `<option value="${escape(r.id)}">${escape(r.name)}</option>`).join('');
-  if (subjectSelect) {
-    subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>' + options;
-  }
-  if (targetSelect) {
-    targetSelect.innerHTML = '<option value="">-- Select Target --</option>' + options;
-  }
+  // Replace only the options: the <button><selectedcontent> lets long names
+  // end in an ellipsis in browsers with styleable dropdowns
+  const fill = (select, placeholder) => {
+    select.querySelectorAll('option').forEach(option => option.remove());
+    select.insertAdjacentHTML('beforeend', `<option value="">${placeholder}</option>${options}`);
+  };
+  if (subjectSelect) fill(subjectSelect, '-- Select Subject --');
+  if (targetSelect) fill(targetSelect, '-- Select Target --');
 }
 
 function loadSubjectForComparison() {

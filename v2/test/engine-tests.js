@@ -605,7 +605,7 @@
         html += `<h2>${escapeHtml(group)}</h2><ul class="tests">`;
       }
       html += `<li class="${r.ok ? 'pass' : 'fail'}">
-        <span class="mark">${r.ok ? '✓' : '✗'}</span>
+        <span class="mark">${r.ok ? 'ok' : 'FAIL'}</span>
         <span class="name">${escapeHtml(r.name)}${r.note ? ` <span class="note">(${escapeHtml(r.note)})</span>` : ''}</span>
         ${r.ok ? '' : `<div class="error">${escapeHtml(r.error)}</div>`}
       </li>`;

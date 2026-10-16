@@ -88,6 +88,12 @@ Interface:
 - Dropdown lists are readable. The selects' translucent backgrounds made the
   browser draw their option lists pale blue with near-white text; options now
   have a solid dark background.
+- Dropdowns use Chrome's styleable select (Chrome and Edge 135+, Chrome on
+  Android): a dark themed list with readable hover and selected rows (the
+  native highlight was pale blue with white text), bold text, an accent
+  arrow, and lists that open below the box. On phones a list is as wide as
+  its box and long record names wrap; in the closed box they end in an
+  ellipsis. Other browsers keep the dark native list.
 - Zodiac signs on the chart wheels are drawn as glyphs in their element
   colours. Windows and Android showed them as purple emoji tiles.
 - Notifications show their success, warning or error colour (the CSS and the

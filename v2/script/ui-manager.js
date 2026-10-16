@@ -91,8 +91,8 @@ const UIManager = (function() {
       const metaRow = document.createElement('div');
       metaRow.className = 'record-meta-row';
       metaRow.innerHTML = `
-        <span class="record-meta">${escapeHtml(rec.date || '—')} ${escapeHtml(rec.time || '')}</span>
-        <span class="record-meta">${escapeHtml(rec.lat || '—')}, ${escapeHtml(rec.lon || '—')}</span>`;
+        <span class="record-meta">${escapeHtml(rec.date || 'n/a')} ${escapeHtml(rec.time || '')}</span>
+        <span class="record-meta">${escapeHtml(rec.lat || 'n/a')}, ${escapeHtml(rec.lon || 'n/a')}</span>`;
       
       // Append all elements in correct order
       el.appendChild(nameEl);

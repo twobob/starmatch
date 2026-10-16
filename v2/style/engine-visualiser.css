@@ -42,6 +42,112 @@ select:disabled {
   cursor: not-allowed;
 }
 
+select,
+select option,
+select optgroup {
+  font-weight: bold;
+}
+
+/* Styleable dropdowns (Chrome and Edge 135+, Chrome on Android). The native
+   list draws its highlighted row in a pale system blue that can't be
+   recoloured; in this mode the whole list follows the theme. Other browsers
+   ignore the block and keep the dark native list above. */
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  select {
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+
+  select::picker-icon {
+    color: var(--accent);
+    transition: rotate 0.2s ease;
+  }
+
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+
+  ::picker(select) {
+    background: #141b29;
+    color: #e2eeff;
+    border: 1px solid rgba(94, 197, 255, 0.35);
+    border-radius: 8px;
+    padding: 0.25rem;
+    margin-block: 4px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+    max-block-size: min(22rem, 60vh);
+    max-inline-size: calc(100vw - 1rem);
+    overflow-y: auto;
+    /* Open below the box, flipping above only when it doesn't fit */
+    position-try-order: normal;
+  }
+
+  select option {
+    background: transparent;
+    color: #e2eeff;
+    padding: 0.5rem 0.75rem;
+    border-radius: 5px;
+    cursor: pointer;
+    /* Long record names wrap inside the list rather than running off screen */
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  select option:hover,
+  select option:focus-visible {
+    background: rgba(94, 197, 255, 0.2);
+    color: #ffffff;
+    outline: none;
+  }
+
+  select option:checked {
+    background: rgba(94, 197, 255, 0.32);
+    color: #ffffff;
+  }
+
+  select option::checkmark {
+    color: var(--accent);
+  }
+
+  /* Record pickers carry <button><selectedcontent> so long names shorten
+     with an ellipsis instead of running under the arrow */
+  select > button {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: inherit;
+  }
+
+  selectedcontent {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* On phones the list is exactly as wide as its box, so it never runs
+     off the screen; long entries wrap */
+  @media (max-width: 768px) {
+    ::picker(select) {
+      max-inline-size: anchor-size(self-inline);
+    }
+  }
+}
+
 /* Action Row & Small Buttons */
 .action-row {
   display: flex;
