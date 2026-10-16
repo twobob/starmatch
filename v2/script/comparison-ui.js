@@ -6,6 +6,12 @@
 (function() {
   'use strict';
 
+  // Two-arrow icons for the overlay chart's full-screen toggle
+  const FULLSCREEN_ICONS = {
+    enter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>',
+    exit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>'
+  };
+
   /**
    * Display comparison results in the UI
    * @param {HTMLElement} comparisonOutput - Output container element
@@ -81,10 +87,13 @@
     
     // Chart Visualisation - moved before theme comparison
     html += `<div class="comparison-chart-container">
-      <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15);">
-        <h4 style="color: var(--accent); margin-top: 0; margin-bottom: 0.75rem; font-size: 0.9rem;">Chart Overlay</h4>
+      <div id="comparison-chart-panel" class="comparison-chart-panel" style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15);">
+        <div class="chart-panel-header">
+          <h4 style="color: var(--accent); margin: 0; font-size: 0.9rem;">Chart Overlay</h4>
+          <button type="button" id="overlay-fullscreen-btn" class="fullscreen-btn" aria-label="Full screen" title="Full screen">${FULLSCREEN_ICONS.enter}</button>
+        </div>
         <canvas id="comparison-chart-canvas" width="400" height="400" style="width: 100%; max-width: 400px; aspect-ratio: 1/1; display: block; margin: 0 auto;"></canvas>
-        <div style="margin-top: 0.75rem; font-size: 0.7rem; color: #8fa8ce; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.5rem;">
+        <div class="overlay-legend" style="margin-top: 0.75rem; font-size: 0.7rem; color: #8fa8ce; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.5rem;">
           <div style="flex: 1 1 10rem; text-align: center;"><span style="color: #74c0fc;">●</span> Subject (${UIManager.escapeHtml(currentSubject.name)})</div>
           <div style="flex: 1 1 10rem; text-align: center;"><span style="color: #b85eff;">●</span> Target (${UIManager.escapeHtml(currentTarget.name)})</div>
         </div>
@@ -178,7 +187,8 @@
   // ============================================================================
 
   window.ComparisonUI = {
-    displayComparisonResults
+    displayComparisonResults,
+    FULLSCREEN_ICONS
   };
 
 })();

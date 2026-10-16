@@ -797,7 +797,13 @@ function updateCompareButton() {
 
 function performComparison() {
   if (!currentSubject || !currentTarget) return;
-  
+
+  // Leave full screen before the overlay panel is replaced
+  if (document.fullscreenElement) document.exitFullscreen();
+  document.querySelectorAll('body > .comparison-chart-panel').forEach(panel => panel.remove());
+  overlayPlaceholder = null;
+  document.body.classList.remove('overlay-fullscreen-open');
+
   // Clear previous comparison output and cleanup old event listeners
   if (comparisonOutput) {
     comparisonOutput.innerHTML = '';
@@ -842,10 +848,28 @@ function performComparison() {
 // Note: displayComparisonResults moved to comparison-ui.js module
 // Now accessed via ComparisonUI.displayComparisonResults()
 
+// The overlay chart is laid out in a 400-unit square (COMPARISON_CHART_CONFIG)
+const COMPARISON_CANVAS_SIZE = 400;
+let lastComparisonDraw = null;
+
+// Give the canvas as many pixels as it is shown at, so it stays sharp when
+// larger (full screen, high-DPI screens); the renderer scales to fit
+function sizeComparisonCanvas(canvas) {
+  const shown = canvas.getBoundingClientRect().width || COMPARISON_CANVAS_SIZE;
+  const pixels = Math.max(COMPARISON_CANVAS_SIZE, Math.round(shown * (window.devicePixelRatio || 1)));
+  if (canvas.width !== pixels) {
+    canvas.width = pixels;
+    canvas.height = pixels;
+  }
+  canvas.dataset.logicalSize = COMPARISON_CANVAS_SIZE;
+}
+
 function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   const compCanvas = document.getElementById('comparison-chart-canvas');
   if (!compCanvas) return;
-  
+
+  lastComparisonDraw = [subjectPos, targetPos, subjectAsc, targetAsc];
+  sizeComparisonCanvas(compCanvas);
   const compCtx = compCanvas.getContext('2d');
   
   // One tooltip at the top level of the page, created on first use: inside the
@@ -892,6 +916,98 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
 
 // Store event listeners for cleanup
 let comparisonTooltipListeners = null;
+
+// Redraw the overlay at its current shown size (after full screen or resizing)
+function redrawComparisonChart() {
+  if (lastComparisonDraw && document.getElementById('comparison-chart-canvas')) {
+    drawComparisonChart(...lastComparisonDraw);
+  }
+}
+
+// Overlay chart full-screen toggle. Uses the browser's full-screen mode, or
+// covers the window where that isn't available (iPhone Safari)
+function isOverlayFullscreen(panel) {
+  return !!panel && (document.fullscreenElement === panel || panel.classList.contains('pseudo-fullscreen'));
+}
+
+// While covering the window the panel moves to the top level of the page:
+// inside the results, panels with backdrop-filter would make its fixed
+// position relative to them. A placeholder marks where it goes back.
+let overlayPlaceholder = null;
+
+function setPseudoFullscreen(panel, on) {
+  if (on && !overlayPlaceholder) {
+    overlayPlaceholder = document.createComment('overlay chart panel');
+    panel.parentNode.insertBefore(overlayPlaceholder, panel);
+    document.body.appendChild(panel);
+  }
+  panel.classList.toggle('pseudo-fullscreen', on);
+  onOverlayFullscreenChange();
+}
+
+function toggleOverlayFullscreen() {
+  const panel = document.getElementById('comparison-chart-panel');
+  if (!panel) return;
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else if (panel.classList.contains('pseudo-fullscreen')) {
+    setPseudoFullscreen(panel, false);
+  } else if (panel.requestFullscreen) {
+    let settled = false;
+    panel.requestFullscreen().then(
+      () => { settled = true; },
+      () => { settled = true; setPseudoFullscreen(panel, true); }
+    );
+    // Some embedded browsers (app web views) never answer the request
+    setTimeout(() => {
+      if (!settled && document.fullscreenElement !== panel) setPseudoFullscreen(panel, true);
+    }, 500);
+  } else {
+    setPseudoFullscreen(panel, true);
+  }
+}
+
+function onOverlayFullscreenChange() {
+  const panel = document.getElementById('comparison-chart-panel');
+  const button = document.getElementById('overlay-fullscreen-btn');
+  // A late grant of real full screen replaces the window-covering fallback
+  if (panel && document.fullscreenElement === panel) panel.classList.remove('pseudo-fullscreen');
+  const on = isOverlayFullscreen(panel);
+  // Back in the page: return the panel to its place in the results
+  if (panel && !on && overlayPlaceholder) {
+    overlayPlaceholder.replaceWith(panel);
+    overlayPlaceholder = null;
+  }
+  document.body.classList.toggle('overlay-fullscreen-open', on);
+  if (button) {
+    button.innerHTML = on ? ComparisonUI.FULLSCREEN_ICONS.exit : ComparisonUI.FULLSCREEN_ICONS.enter;
+    button.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen');
+    button.title = on ? 'Exit full screen' : 'Full screen';
+  }
+  const tooltip = document.getElementById('comparison-tooltip');
+  if (tooltip) tooltip.style.display = 'none';
+  // Redraw now and once the browser has settled the new size
+  redrawComparisonChart();
+  setTimeout(redrawComparisonChart, 150);
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#overlay-fullscreen-btn')) toggleOverlayFullscreen();
+});
+document.addEventListener('fullscreenchange', onOverlayFullscreenChange);
+
+document.addEventListener('keydown', (e) => {
+  const panel = document.getElementById('comparison-chart-panel');
+  if (e.key === 'Escape' && panel && panel.classList.contains('pseudo-fullscreen')) {
+    setPseudoFullscreen(panel, false);
+  }
+});
+
+let comparisonResizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(comparisonResizeTimer);
+  comparisonResizeTimer = setTimeout(redrawComparisonChart, 150);
+});
 
 
 

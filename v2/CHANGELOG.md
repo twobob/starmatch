@@ -144,6 +144,12 @@ Security:
   already supported them).
 - Orb set labels show their values (v1's "Tight" set was wider than the
   default for trines and squares).
+- **Full screen for the overlay chart**: a two-arrow button at the top right
+  of the Chart Overlay panel shows the chart, legend and tooltips full screen
+  and back. It uses the browser's full-screen mode, or covers the window where
+  that isn't available or never answers (iPhone Safari, app web views); Escape
+  also leaves. The chart is drawn at the size it is shown, so it stays sharp
+  when enlarged and on high-resolution screens.
 - **Export and Import** of records as JSON, which the delete warning already
   promised. Imports are validated field by field, and records already saved
   (same id, or same name and birth data) are skipped.

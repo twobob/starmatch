@@ -5,18 +5,34 @@
 const ComparisonChartRenderer = (function() {
   'use strict';
 
+  // The chart is laid out in a fixed logical square (the canvas width
+  // attribute, 400). The canvas may hold more pixels than that so it stays
+  // sharp when shown larger (full screen, high-DPI screens); scale the
+  // context to match and return the logical size.
+  function logicalSize(canvas) {
+    return Number(canvas.dataset.logicalSize) || canvas.width;
+  }
+
+  function prepareContext(ctx, canvas) {
+    const size = logicalSize(canvas);
+    const scale = canvas.width / size;
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    return size;
+  }
+
   // Draw comparison chart with subject and target data
   function drawComparisonChart(compCtx, compCanvas, subjectPos, targetPos, subjectAsc, targetAsc, comparisonChartConfig, comparisonHouseCuspOptions) {
     if (!compCanvas) return null;
     
-    const centerX = compCanvas.width / 2;
-    const centerY = compCanvas.height / 2;
+    const size = prepareContext(compCtx, compCanvas);
+    const centerX = size / 2;
+    const centerY = size / 2;
     const outerRadius = comparisonChartConfig.outerRadius;
     const innerRadius = comparisonChartConfig.innerRadius;
     
-    compCtx.clearRect(0, 0, compCanvas.width, compCanvas.height);
+    compCtx.clearRect(0, 0, size, size);
     compCtx.fillStyle = '#05070f';
-    compCtx.fillRect(0, 0, compCanvas.width, compCanvas.height);
+    compCtx.fillRect(0, 0, size, size);
     
     // Draw zodiac wheel using subject's ascendant
     ChartRenderer.drawZodiacWheelOnCanvas(compCtx, centerX, centerY, outerRadius, innerRadius, subjectAsc, true);
@@ -145,8 +161,8 @@ const ComparisonChartRenderer = (function() {
     
     // Store chart data for tooltip calculations
     const compChartData = {
-      centerX: compCanvas.width / 2,
-      centerY: compCanvas.height / 2,
+      centerX: logicalSize(compCanvas) / 2,
+      centerY: logicalSize(compCanvas) / 2,
       outerRadius: comparisonChartConfig.outerRadius,
       innerRadius: comparisonChartConfig.innerRadius,
       subjectPos,
@@ -163,15 +179,16 @@ const ComparisonChartRenderer = (function() {
     
     function redrawChart(hoveredPlanet) {
       const compCtx = compCanvas.getContext('2d');
-      const centerX = compCanvas.width / 2;
-      const centerY = compCanvas.height / 2;
+      const size = prepareContext(compCtx, compCanvas);
+      const centerX = size / 2;
+      const centerY = size / 2;
       const outerRadius = comparisonChartConfig.outerRadius;
       const innerRadius = comparisonChartConfig.innerRadius;
       const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
       
-      compCtx.clearRect(0, 0, compCanvas.width, compCanvas.height);
+      compCtx.clearRect(0, 0, size, size);
       compCtx.fillStyle = '#05070f';
-      compCtx.fillRect(0, 0, compCanvas.width, compCanvas.height);
+      compCtx.fillRect(0, 0, size, size);
       
       // Draw zodiac wheel
       ChartRenderer.drawZodiacWheelOnCanvas(compCtx, centerX, centerY, outerRadius, innerRadius, subjectAsc, true);
@@ -280,8 +297,8 @@ const ComparisonChartRenderer = (function() {
     
     function getMousePos(canvas, evt) {
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
+      const scaleX = logicalSize(canvas) / rect.width;
+      const scaleY = logicalSize(canvas) / rect.height;
       return {
         x: (evt.clientX - rect.left) * scaleX,
         y: (evt.clientY - rect.top) * scaleY

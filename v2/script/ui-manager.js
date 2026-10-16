@@ -183,10 +183,12 @@ const UIManager = (function() {
    * Tooltips are position: fixed, which only follows the window when the
    * element is not inside a panel with a filter, backdrop-filter or transform
    * (those make "fixed" relative to the panel), so the tooltip is moved to the
-   * top level of the page first.
+   * top level of the page first. In full screen only the full-screen element
+   * is shown, so the tooltip goes inside it instead.
    */
   function placeTooltip(tooltip, evt) {
-    if (tooltip.parentElement !== document.body) document.body.appendChild(tooltip);
+    const host = document.fullscreenElement || document.body;
+    if (tooltip.parentElement !== host) host.appendChild(tooltip);
     tooltip.style.display = 'block';
     const gap = 15;
     const margin = 8;
