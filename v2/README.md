@@ -1,12 +1,13 @@
 # Starmatch v2
 
-The next version of Starmatch. It is a copy of the app with every known
-difference from the documented behaviour fixed. The original app in the repository root is
-left untouched as the reference.
+The current version of Starmatch: the app with every known difference from
+the documented behaviour fixed. The site's main page opens it. The original
+app (v1) is kept unchanged in [`../v1`](../v1) as the reference.
 
 Everything runs in the browser: no server, no build step, no Node. Open
-`starmatch.html` (or `index.html`, the same app over the galaxy background)
-directly, or serve the folder with any static file server.
+`index.html` (the app over the starfield background) directly, or serve the
+repository with any static file server. `starmatch.html` forwards to it so
+old links keep working.
 
 ## Tests
 

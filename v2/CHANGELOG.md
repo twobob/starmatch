@@ -1,7 +1,7 @@
 # Changelog
 
-Changes in Starmatch v2 compared with the original app (v1) in the
-repository root.
+Changes in Starmatch v2 compared with the original app (v1), now kept in
+[`../v1`](../v1).
 
 ## v2 (unreleased)
 
@@ -9,6 +9,14 @@ Checked against Will's engine documentation in [`../engineDocs`](../engineDocs)
 (ResearchOptions.txt, AspectStrengths.txt, xProfileValues.txt) and the feature
 list in the main README. Every check below has a test in
 [`test/engine-tests.html`](test/engine-tests.html).
+
+### Site
+
+- The site's main page opens v2. The original app moved to `v1/`; the old
+  root links (`index.html`, `starmatch.html`, `privacy.html`) forward to v2.
+- v2 has one app page, `index.html`, with the starfield background.
+  `starmatch.html` forwards to it, so the app markup no longer exists in two
+  copies that had to be kept in step.
 
 ### Changed
 
@@ -122,8 +130,8 @@ Security:
   hint shows the zone and UTC offset used for that date. The zone is saved
   with each record (`tz`).
 - **Planet Orb Set** picker (Lilly / al-Biruni), saved with each record
-  (`planetOrbSet`). The orb set that doesn't apply to the selected orb type is
-  greyed out.
+  (`planetOrbSet`). Only the orb set that applies to the selected orb type is
+  shown (aspect orb sets with aspect orbs, planet orb sets with planet orbs).
 - **Alternative Modern** traditional factors in the picker (the engine
   already supported them).
 - Orb set labels show their values (v1's "Tight" set was wider than the

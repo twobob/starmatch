@@ -296,11 +296,12 @@ function updateTimeZoneHint() {
   }
 }
 
-// Aspect orb sets apply only with aspect orbs, planet orb sets only with planet orbs
+// Aspect orb sets apply only with aspect orbs, planet orb sets only with planet
+// orbs, so show just the one that applies (a greyed-out list read as broken)
 function syncOrbControls() {
   const planetOrbs = orbTypeSelect.value === '1';
-  aspectOrbSetSelect.disabled = planetOrbs;
-  if (planetOrbSetSelect) planetOrbSetSelect.disabled = !planetOrbs;
+  aspectOrbSetSelect.closest('.setting-row').hidden = planetOrbs;
+  if (planetOrbSetSelect) planetOrbSetSelect.closest('.setting-row').hidden = !planetOrbs;
 }
 
 // Note: toUTC, getEclipticLongitude, calculateAscendant, calculateMidheaven

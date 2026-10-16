@@ -4,11 +4,16 @@
 
 An interactive browser-based astrological calculation engine for precise natal chart analysis and relationship compatibility research. Starmatch combines astronomical accuracy with traditional astrological interpretation, offering configurable calculation parameters and quantitative comparison methods.
 
+## Versions
+
+- **v2 (current)**: opens from the main page and lives in [`v2/`](v2/). It brings the engine and chart display into line with the engine documentation, adds historical time zones and record export/import, and runs its tests in the browser. See [`v2/README.md`](v2/README.md) and [`v2/CHANGELOG.md`](v2/CHANGELOG.md).
+- **v1 (original)**: kept unchanged in [`v1/`](v1/). The file list and technical notes below describe v1.
+
 ## Usage
 
 ### Chart Mode (Single Natal Chart Analysis)
 
-1. **Open Application**: Load `starmatch.html` in a modern browser [try it here](https://twobob.github.io/starmatch/)
+1. **Open Application**: Open the main page in a modern browser ([try it here](https://twobob.github.io/starmatch/)); the original is at `v1/starmatch.html`
 2. **Optional: Configure Engine Settings**:
    - **Orb Type**: Aspect-based (default) or Planet-based
    - **Aspect Orb Set**: Select tolerance levels for aspect detection

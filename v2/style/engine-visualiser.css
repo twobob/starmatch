@@ -1026,6 +1026,10 @@ h3 {
   gap: 1rem;
 }
 
+.setting-row[hidden] {
+  display: none;
+}
+
 .setting-row select {
   flex: 1;
   max-width: 300px;
