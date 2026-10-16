@@ -762,6 +762,18 @@ function loadTargetForComparison() {
   }
 }
 
+// The zone and UTC offset a record's birth time is converted with, saying
+// which zone was guessed when the record has none saved
+function describeRecordTimeZone(record) {
+  const result = TimezoneHelper.localToUTC(record.date, record.time,
+    parseFloat(record.lat), parseFloat(record.lon), record.tz);
+  if (!result) return record.tz || 'unknown';
+  const { zone, offsetLabel, guessed, approximate } = result.tzInfo;
+  if (!guessed) return `${zone}, ${offsetLabel} on that date`;
+  if (approximate) return `${offsetLabel}, rough guess from longitude (no daylight saving)`;
+  return `${zone} (guessed from location), ${offsetLabel} on that date`;
+}
+
 function displayPersonInfo(record, container) {
   if (!container) return;
   const escape = UIManager.escapeHtml;
@@ -769,7 +781,7 @@ function displayPersonInfo(record, container) {
     <div class="person-details">
       <p><strong>Date:</strong> ${escape(record.date)} ${escape(record.time)}</p>
       <p><strong>Location:</strong> ${escape(record.lat)}, ${escape(record.lon)}</p>
-      <p><strong>Time zone:</strong> ${escape(record.tz || 'guessed from location')}</p>
+      <p><strong>Time zone:</strong> ${escape(describeRecordTimeZone(record))}</p>
     </div>
   `;
 }

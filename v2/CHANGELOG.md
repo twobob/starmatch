@@ -128,7 +128,9 @@ Security:
   coordinates for the UK, Ireland, Iberia, France and neighbours, the US and
   Australia; elsewhere it falls back to a whole-hour offset and says so. A
   hint shows the zone and UTC offset used for that date. The zone is saved
-  with each record (`tz`).
+  with each record (`tz`). In Starmatch mode the Subject and Target panels
+  name the zone each birth time uses, saying when it was guessed (for example
+  "Europe/London (guessed from location), UTC+01:00 on that date").
 - **Planet Orb Set** picker (Lilly / al-Biruni), saved with each record
   (`planetOrbSet`). Only the orb set that applies to the selected orb type is
   shown (aspect orb sets with aspect orbs, planet orb sets with planet orbs).
