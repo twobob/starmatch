@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Starmatch engine tests</title>
+  <link rel="icon" href="../favicon.ico">
+  <style>
+    :root {
+      --bg: #05070f;
+      --panel: rgba(10, 13, 19, 0.8);
+      --border: rgba(94, 197, 255, 0.2);
+      --text: #b8d0f0;
+      --muted: #8fa8ce;
+      --accent: #5ec5ff;
+      --pass: #51cf66;
+      --fail: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main { max-width: 860px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+    h1 { color: var(--accent); margin: 0 0 0.25rem; font-size: 1.6rem; }
+    h2 { color: var(--accent); font-size: 1rem; margin: 1.75rem 0 0.5rem; }
+    a { color: var(--accent); }
+    code { font-family: "Fira Code", Consolas, monospace; font-size: 0.9em; }
+    .engine-line { color: var(--muted); margin: 0 0 1rem; overflow-wrap: anywhere; }
+    .summary {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      font-weight: 600;
+    }
+    .summary.pass { color: var(--pass); border-color: rgba(81, 207, 102, 0.4); }
+    .summary.fail { color: var(--fail); border-color: rgba(255, 107, 107, 0.4); }
+    ul.tests { list-style: none; margin: 0; padding: 0; }
+    ul.tests li {
+      padding: 0.5rem 0.75rem;
+      border-left: 3px solid var(--border);
+      margin-bottom: 0.4rem;
+      background: var(--panel);
+      border-radius: 0 6px 6px 0;
+    }
+    ul.tests li.pass { border-left-color: var(--pass); }
+    ul.tests li.fail { border-left-color: var(--fail); }
+    .mark { font-weight: 700; margin-right: 0.4rem; }
+    li.pass .mark { color: var(--pass); }
+    li.fail .mark { color: var(--fail); }
+    .note { color: var(--muted); font-size: 0.85em; }
+    .error {
+      margin-top: 0.35rem;
+      color: var(--fail);
+      font-family: "Fira Code", Consolas, monospace;
+      font-size: 0.8rem;
+      overflow-wrap: anywhere;
+    }
+    table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; }
+    button {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:hover { background: rgba(94, 197, 255, 0.1); }
+    p { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Engine tests</h1>
+    <p class="engine-line">Engine: <code id="engine-src"></code> · <a id="switch-link" href="?"></a></p>
+    <div id="summary" class="summary">Running...</div>
+    <div id="results"></div>
+
+    <section id="diff-section" hidden>
+      <h2>Before vs after</h2>
+      <div id="diff"></div>
+    </section>
+
+    <section>
+      <h2>Fixtures</h2>
+      <p>
+        The pinned values live in <code>fixtures/</code>. If a change to the engine is intended,
+        download a new <code id="fixture-name"></code>, replace the old one, and reload.
+      </p>
+      <button id="download" type="button">Download fixture for this engine</button>
+    </section>
+  </main>
+
+  <!-- engine.js expects this helper from starmatch-visualiser.js -->
+  <script>window.TidyUpAndFloat = function (value) { return parseFloat(value) || 0; };</script>
+  <script src="test-cases.js"></script>
+  <script src="engine-harness.js"></script>
+  <script src="fixtures/engine-before.js"></script>
+  <script src="fixtures/engine-after.js"></script>
+  <script src="engine-tests.js"></script>
+</body>
+</html>

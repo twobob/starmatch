@@ -1,0 +1,327 @@
+/* Location Picker Modal Styles */
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-content {
+  background: var(--panel);
+  border-radius: 16px;
+  border: 2px solid var(--border);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  width: min(800px, 90vw);
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--accent);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #8fa8ce;
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.modal-body {
+  padding: 2rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.search-section {
+  margin-bottom: 2rem;
+}
+
+.search-box {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.875rem 1rem;
+  background: rgba(94, 197, 255, 0.08);
+  border: 1px solid rgba(94, 197, 255, 0.3);
+  border-radius: 8px;
+  color: #e2eeff;
+  font-size: 1rem;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(94, 197, 255, 0.15);
+}
+
+.search-input::placeholder {
+  color: #6a7fa0;
+}
+
+.search-btn {
+  padding: 0.875rem 2rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.search-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(94, 197, 255, 0.4);
+}
+
+.search-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.search-hint {
+  font-size: 0.85rem;
+  color: #8fa8ce;
+  margin-top: 0.5rem;
+}
+
+.results-section {
+  margin-top: 1.5rem;
+}
+
+.results-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #b8d0f0;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.result-item {
+  padding: 1rem;
+  background: rgba(94, 197, 255, 0.08);
+  border: 1px solid rgba(94, 197, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.result-item:hover {
+  background: rgba(94, 197, 255, 0.15);
+  border-color: var(--accent);
+  transform: translateX(4px);
+}
+
+.result-item.selected {
+  background: rgba(94, 197, 255, 0.25);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(94, 197, 255, 0.3);
+}
+
+.result-name {
+  font-weight: 600;
+  color: var(--accent-warm);
+  font-size: 1rem;
+}
+
+.result-details {
+  font-size: 0.85rem;
+  color: #8fa8ce;
+}
+
+.result-coords {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.8rem;
+  color: #b8d0f0;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 2rem;
+  color: var(--accent);
+  font-style: italic;
+}
+
+.loading-spinner::after {
+  content: '...';
+  animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+.error-message {
+  padding: 1rem;
+  background: rgba(255, 69, 0, 0.15);
+  border: 1px solid rgba(255, 69, 0, 0.4);
+  border-radius: 8px;
+  color: #ff9e7a;
+  margin-top: 1rem;
+}
+
+.no-results {
+  text-align: center;
+  padding: 2rem;
+  color: #6a7fa0;
+  font-style: italic;
+}
+
+.modal-footer {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  background: rgba(94, 197, 255, 0.12);
+  border: 1px solid rgba(94, 197, 255, 0.3);
+  border-radius: 8px;
+  color: var(--accent);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(94, 197, 255, 0.22);
+  border-color: var(--accent);
+}
+
+.btn-primary {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(94, 197, 255, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Location lookup icon button */
+.location-lookup-btn {
+  padding: 0.75rem;
+  background: rgba(94, 197, 255, 0.12);
+  border: 1px solid rgba(94, 197, 255, 0.3);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+}
+
+.location-lookup-btn:hover {
+  background: rgba(94, 197, 255, 0.22);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.location-lookup-btn:active {
+  transform: translateY(0);
+}
+
+/* Adjust the input row to accommodate the button */
+.input-row.with-lookup {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+/* Map container (for future enhancement) */
+.map-container {
+  height: 400px;
+  background: rgba(10, 13, 19, 0.8);
+  border-radius: 8px;
+  border: 1px solid rgba(94, 197, 255, 0.2);
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6a7fa0;
+  font-style: italic;
+}
