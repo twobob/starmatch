@@ -45,8 +45,8 @@ const AspectGrid = (function() {
         if (diff > 180) diff = 360 - diff;
         
         for (const aspectAngle of aspectAngles) {
-          const orb = window.orbType === 0 ? window.ao[window.aoIndex][aspectAngles.indexOf(aspectAngle)] : 8;
-          if (Math.abs(diff - aspectAngle) <= orb) {
+          const orb = ChartRenderer.getAspectOrb(aspectAngles.indexOf(aspectAngle), p1.index, p2.index);
+          if (Math.abs(diff - aspectAngle) < orb) {
             const aspectTypes = {
               0: 'Conjunction',
               30: 'Semi-sextile',

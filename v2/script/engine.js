@@ -15,8 +15,11 @@
 // Program: twobob
 // Engine: Will 18
 // algorithm version: 6.2 - most recent changes since the twobob rewrite
-// v2 fixes: element/quality emphasis checks use numTradFactors indices,
-// dominant aspect tie check, planet-orb loops for themes 8, 11, 12.
+// v2 fixes, checked against engineDocs/ResearchOptions.txt: element/quality
+// emphasis checks use numTradFactors indices, dominant aspect tie check,
+// planet-orb loops for themes 8, 11, 12, planet orbs for Moon/Asc aspect tests,
+// debility uses the selected detriment/fall tables, mutual reception checks
+// all 12 signs with the selected rulers, precession year+130 for BCE years.
 // Pinned by test/engine-tests.html
 /* ******************************************************************************* */
 var rp = -1;	// ruling planet ( number )
@@ -180,7 +183,8 @@ var orbValue = 0;
 			if ( tf[tfIndex][signY] == Px )
 				return -1;	// skip planet in own sign
 			var signX;
-			for ( m = 0; m < 10; m++ )
+// v2 fix: m is a sign index, so check all 12 signs (10 skipped Aquarius and Pisces)
+			for ( m = 0; m < 12; m++ )
 			{
 				if ( tf[tfIndex][m] == Px )
 				{
@@ -201,11 +205,9 @@ var orbValue = 0;
 		*/
 		function precession ( year )
 		{
-			var elapsedYears;
-			if ( year < 0 )
-				elapsedYears = year-130;
-			else
-				elapsedYears = year+130;
+			// v2 fix: years elapsed since 130 BCE is year+130 for BCE years too
+			// (year-130 doubled the distance); see ResearchOptions.txt
+			var elapsedYears = year+130;
 			return 360*elapsedYears/25772;	// degrees precessed
 		}
 		
@@ -238,7 +240,7 @@ var orbValue = 0;
 				if ( inMR != -1 )
 				{	// effective conjunction affects theme of both planets involved
 					themeValue += ps[signRuler];	// add a point - note: we do not consider aspect just sign
-					theme[inMR] += ps[tf[0][inMR]];
+					theme[inMR] += ps[tf[tfIndex][inMR]];	// v2 fix: ruler under the selected factors, not always ancient
 				}
 			}
 			if ( themeNum != 5 )	// Sun in House themeNum (not Leo)?
@@ -289,18 +291,18 @@ var orbValue = 0;
 						orbValue = ao[aoIndex][n];
 					else
 						orbValue = 0.5*(po[poIndex][1]+po[poIndex][signRuler]);
-					if ( isAspect ( planet[1], planet[signRuler], a[n], ao[aoIndex][n] ) )	// signRuler/Moon aspect
+					// v2 fix: test with the same orb as the strength (planet orbs when selected)
+					if ( isAspect ( planet[1], planet[signRuler], a[n], orbValue ) )	// signRuler/Moon aspect
 						themeValue += ps[1]*ps[signRuler]*weighting * rulerWeighting * aspectStrength ( planet[1], planet[signRuler], a[n], orbValue, af[n] );
 				}
 				
-				if ( isAspect ( planet[10], planet[signRuler], a[n], ao[aoIndex][n] ) )	// signRuler/Ascendant aspect
-				{
-					if ( orbType == 0 )	// aspect orbs
-						orbValue = ao[aoIndex][n];
-					else
-						orbValue = po[poIndex][signRuler];	// we don't have a planet orb for asc.
+				// v2 fix: choose the orb before testing, so planet orbs apply to the test too
+				if ( orbType == 0 )	// aspect orbs
+					orbValue = ao[aoIndex][n];
+				else
+					orbValue = po[poIndex][signRuler];	// we don't have a planet orb for asc.
+				if ( isAspect ( planet[10], planet[signRuler], a[n], orbValue ) )	// signRuler/Ascendant aspect
 					themeValue +=ps[signRuler]* weighting * aspectStrength ( planet[10], planet[signRuler], a[n], orbValue, af[n] );
-				}
 
 // will18_1 mod:
 // remove reference to MC entirely, probably not directly relationship-related				
@@ -480,7 +482,9 @@ var orbValue = 0;
 		{
 			var sign = signNum ( planet[n] );
 			
-			if ( ( tf[3][sign] == n ) || ( tf[4][sign] == n ) )
+			// v2 fix: detriment and fall rows of the selected factors (tfIndex+2, tfIndex+3);
+			// tf[3] was always ancient fall and tf[4] is the modern *ruler* row
+			if ( ( tf[tfIndex+2][sign] == n ) || ( tf[tfIndex+3][sign] == n ) )
 				ps[n] = 0.5;	// reduce contribution
 		}
 	
@@ -616,7 +620,7 @@ var orbValue = 0;
 	
 		// ##### Theme 10 #####
 		calculateThemeValue ( 10, tf[tfIndex][9], 1 );
-		// Is the chart emphasis on any of the following:  fire, mutable, trine aspects
+		// Is the chart emphasis on any of the following:  earth, cardinal, square aspects
 		if ( tfDominant[1] == 3 )		//  earth dominant?
 			theme[9] += 1;
 		if ( tfDominant[2] == 6 )		// cardinal dominant?

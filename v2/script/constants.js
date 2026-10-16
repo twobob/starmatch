@@ -8,7 +8,9 @@ const AstroConstants = {
   SIGN_NAMES: ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 
                'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'],
   
-  SIGN_SYMBOLS: ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'],
+  // Each followed by U+FE0E (text presentation): without it Windows and Android
+  // draw the zodiac signs as purple emoji tiles instead of coloured glyphs
+  SIGN_SYMBOLS: ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'].map(s => s + '\uFE0E'),
   
   // Planets
   PLANET_NAMES: ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 
@@ -42,7 +44,8 @@ const AstroConstants = {
     Water: '#a78bfa'    // Purple - emotional, deep
   },
   
-  // Ruling planets for each sign
+  // Modern ruling planets, used only before engine.js has loaded;
+  // ZodiacUtils.getSignRuler() follows the selected traditional factors
   RULING_PLANETS: {
     'Aries': 'Mars',
     'Taurus': 'Venus',
@@ -57,12 +60,6 @@ const AstroConstants = {
     'Aquarius': 'Uranus',
     'Pisces': 'Neptune'
   },
-  
-  // Zodiac wheel rotation offset (degrees) to align signs with ascendant line
-  ZODIAC_ROTATION_OFFSET: 13,
-  
-  // Zodiac wheel rotation offset for comparison chart only
-  COMPARISON_ZODIAC_ROTATION_OFFSET: 0,
   
   // Show ascendant tooltips in comparison chart (sign, degree, element info)
   SHOW_ASCENDANT_TOOLTIPS_IN_COMPARISON: false,

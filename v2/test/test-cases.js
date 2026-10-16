@@ -27,39 +27,44 @@
     return SIGNS.indexOf(sign) * 30 + d + m / 60 + s / 3600;
   }
 
-  // The app adds 30° to planets (and, via its +209.917 constant, the Ascendant)
-  // before calling the engine; the Midheaven is passed unshifted.
-  function appShift(longitude) {
-    return (longitude + 30) % 360;
+  // The original app added 30° to the planets and (via its +209.917 constant)
+  // the Ascendant before calling the engine; the Midheaven was passed as is.
+  // Used to feed the original engine the way the original app did.
+  function appShift(positions) {
+    return positions.map((p, i) => (i < 11 ? (p + 30) % 360 : p));
   }
 
-  // Engine argument order: Sun..Pluto, Ascendant, Midheaven
+  // Engine argument order: Sun..Pluto, Ascendant, Midheaven (tropical degrees)
+  const EDINBURGH_1974 = {
+    id: 'edinburgh-1974',
+    year: 1974,
+    // Planets are geocentric so the exact birthplace barely matters; the Ascendant and
+    // Midheaven were cast for astro.com's "Edinburgh" (55°57'N 3°12'W)
+    note: '1974-09-11 14:14 BST, Edinburgh (astro.com reference values)',
+    positions: [
+      lon('Virgo', 18, 25, 15),
+      lon('Cancer', 15, 4, 42),
+      lon('Libra', 8, 13, 58),
+      lon('Virgo', 3, 51, 5),
+      lon('Virgo', 29, 11, 41),
+      lon('Pisces', 12, 7, 39),
+      lon('Cancer', 16, 42, 1),
+      lon('Libra', 25, 44, 3),
+      lon('Sagittarius', 6, 59, 41),
+      lon('Libra', 5, 59, 1),
+      lon('Sagittarius', 3, 16, 2),
+      lon('Libra', 5, 57, 0)
+    ]
+  };
+
   const charts = [
-    {
-      id: 'edinburgh-1974',
-      year: 1974,
-      note: 'self-test.js reference chart (1974-09-11 14:14 BST, Edinburgh), with the app shift',
-      positions: [
-        appShift(lon('Virgo', 18, 25, 15)),
-        appShift(lon('Cancer', 15, 4, 42)),
-        appShift(lon('Libra', 8, 13, 58)),
-        appShift(lon('Virgo', 3, 51, 5)),
-        appShift(lon('Virgo', 29, 11, 41)),
-        appShift(lon('Pisces', 12, 7, 39)),
-        appShift(lon('Cancer', 16, 42, 1)),
-        appShift(lon('Libra', 25, 44, 3)),
-        appShift(lon('Sagittarius', 6, 59, 41)),
-        appShift(lon('Libra', 5, 59, 1)),
-        appShift(lon('Sagittarius', 3, 16, 2)),
-        lon('Libra', 5, 57, 0)
-      ]
-    },
+    EDINBURGH_1974,
     {
       id: 'london-2000',
       year: 2000,
-      note: 'comparison-engine.test.js integration record (2000-01-01 12:00, London), already shifted',
-      positions: [310.3686, 253.3239, 301.8889, 271.5652, 357.9639, 55.2542,
-                  70.3961, 344.8061, 333.1954, 281.4547, 53.9338, 280.3328]
+      note: '2000-01-01 12:00 GMT, London',
+      positions: [280.3686, 223.3239, 271.8889, 241.5652, 327.9639, 25.2542,
+                  40.3961, 314.8061, 303.1954, 251.4547, 23.9338, 280.3328]
     }
   ];
 
@@ -92,6 +97,20 @@
     });
   });
 
+  // Charts for single-rule checks, pinned with raw (unscaled) theme totals in
+  // the "before" fixture so v2 can be compared with the original engine
+  const probes = [
+    {
+      id: 'mutual-reception-aquarius',
+      year: 1990,
+      note: 'Saturn in Sagittarius, Jupiter in Aquarius (ancient rulers): mutual reception via Aquarius',
+      settings: { tfIndex: 0 },
+      // Found by search so that no other v2 fix applies (no debilitated planet under
+      // either rule, no element or quality dominance, same dominant aspect)
+      positions: [255.1, 328.6, 4.4, 298.9, 213.3, 310.8, 268.3, 18.6, 69.5, 170.8, 201.3, 169.6]
+    }
+  ];
+
   function settingsId(s) {
     return `ot${s.orbType}-ao${s.aoIndex}-po${s.poIndex}-tf${s.tfIndex}-pr${s.precessionFlag}`;
   }
@@ -105,8 +124,10 @@
     mulberry32,
     lon,
     appShift,
+    EDINBURGH_1974,
     charts,
     settings,
+    probes,
     settingsId,
     caseId
   };

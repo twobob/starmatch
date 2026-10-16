@@ -16,6 +16,9 @@ const orbTypeSelect = document.getElementById('orb-type');
 const aspectOrbSetSelect = document.getElementById('aspect-orb-set');
 const traditionalFactorsSelect = document.getElementById('traditional-factors');
 const precessionCheckbox = document.getElementById('precession-flag');
+const planetOrbSetSelect = document.getElementById('planet-orb-set');
+const timeZoneSelect = document.getElementById('birth-tz');
+const timeZoneHint = document.getElementById('tz-hint');
 const locationLookupBtn = document.getElementById('location-lookup');
 const selectedLocationName = document.getElementById('selected-location-name');
 const dateRangeHint = document.getElementById('date-range-hint');
@@ -27,6 +30,9 @@ const recordsPanel = document.getElementById('records-panel');
 const recordsList = document.getElementById('records-list');
 const btnCloseRecords = document.getElementById('btn-close-records');
 const btnClearAll = document.getElementById('btn-clear-all');
+const btnExportRecords = document.getElementById('btn-export-records');
+const btnImportRecords = document.getElementById('btn-import-records');
+const importRecordsFile = document.getElementById('import-records-file');
 
 // Modal elements
 const saveModal = document.getElementById('save-modal');
@@ -93,7 +99,7 @@ const dominantInfo = document.getElementById('dominant-info');
 // Constants
 const SIGN_NAMES = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 
                     'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
-const SIGN_SYMBOLS = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
+const SIGN_SYMBOLS = AstroConstants.SIGN_SYMBOLS;
 const PLANET_NAMES = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 
                       'Saturn', 'Uranus', 'Neptune', 'Pluto'];
 const ASPECT_NAMES = ['Conjunction', 'Opposition', 'Trine', 'Square', 'Sextile', 'Semi-square', 'Semi-sextile'];
@@ -239,6 +245,64 @@ function TidyUpAndFloat(value) {
   return parseFloat(value) || 0;
 }
 
+// Year straight from YYYY-MM-DD (new Date() would read it as UTC midnight,
+// which is the previous year on 1 January west of Greenwich)
+function birthYearFromDate(dateStr) {
+  return parseInt(dateStr, 10);
+}
+
+// Time zone chosen in the picker, or '' for a guess from the location
+function selectedTimeZone() {
+  return timeZoneSelect ? timeZoneSelect.value : '';
+}
+
+function populateTimeZones() {
+  if (!timeZoneSelect || typeof TimezoneHelper === 'undefined') return;
+  const fragment = document.createDocumentFragment();
+  TimezoneHelper.listTimeZones().forEach(zone => {
+    const option = document.createElement('option');
+    option.value = zone;
+    option.textContent = zone.replace(/_/g, ' ');
+    fragment.appendChild(option);
+  });
+  timeZoneSelect.appendChild(fragment);
+}
+
+// Show which zone and UTC offset the birth time will be converted with
+function updateTimeZoneHint() {
+  if (!timeZoneHint || typeof TimezoneHelper === 'undefined') return;
+  const dateStr = InputManager.getDate();
+  const timeStr = InputManager.getTime();
+  const latitude = InputManager.getLatitude();
+  const longitude = InputManager.getLongitude();
+  const result = (dateStr && timeStr && latitude !== null && longitude !== null)
+    ? TimezoneHelper.localToUTC(dateStr, timeStr, latitude, longitude, selectedTimeZone())
+    : null;
+
+  timeZoneHint.classList.remove('warning');
+  if (!result) {
+    timeZoneHint.textContent = '';
+    return;
+  }
+
+  const { zone, offsetLabel, guessed, approximate } = result.tzInfo;
+  if (!guessed) {
+    timeZoneHint.textContent = `${zone}, ${offsetLabel} on this date`;
+  } else if (approximate) {
+    timeZoneHint.textContent = `Rough guess ${offsetLabel} (no daylight saving). Pick the birthplace's time zone.`;
+    timeZoneHint.classList.add('warning');
+  } else {
+    timeZoneHint.textContent = `Guessed ${zone}, ${offsetLabel} on this date. Change it if that's wrong.`;
+  }
+}
+
+// Aspect orb sets apply only with aspect orbs, planet orb sets only with planet orbs
+function syncOrbControls() {
+  const planetOrbs = orbTypeSelect.value === '1';
+  aspectOrbSetSelect.disabled = planetOrbs;
+  if (planetOrbSetSelect) planetOrbSetSelect.disabled = !planetOrbs;
+}
+
 // Note: toUTC, getEclipticLongitude, calculateAscendant, calculateMidheaven
 // moved to astronomical-calculations.js module and accessed via AstroCalc.*
 
@@ -262,23 +326,25 @@ function calculateChart() {
     return;
   }
 
-  const date = AstroCalc.toUTC(dateStr, timeStr, latitude, longitude);
-  if (!date || !isFinite(latitude) || !isFinite(longitude)) {
+  if (!isFinite(latitude) || !isFinite(longitude)) {
+    showToast('Invalid date, time, or coordinates', 'error');
+    return;
+  }
+
+  const date = AstroCalc.toUTC(dateStr, timeStr, latitude, longitude, selectedTimeZone());
+  updateTimeZoneHint();
+  if (!date) {
     showToast('Invalid date, time, or coordinates', 'error');
     return;
   }
 
   try {
-    // Calculate planetary positions using Astronomy Engine
+    // Calculate planetary positions using Astronomy Engine (tropical longitudes)
     const planetaryPositions = {};
-    
+
     for (const planetName of PLANET_NAMES) {
       try {
-        const longitude = AstroCalc.getEclipticLongitude(planetName, date);
-        planetaryPositions[planetName] = longitude + 30;
-        if (planetaryPositions[planetName] >= 360) {
-          planetaryPositions[planetName] -= 360;
-        }
+        planetaryPositions[planetName] = AstroCalc.getEclipticLongitude(planetName, date);
       } catch (e) {
         console.error(`Error calculating ${planetName}:`, e);
         showToast(`Error calculating ${planetName}: ${e.message}`, 'error');
@@ -292,10 +358,11 @@ function calculateChart() {
     // Apply engine settings to global variables from engine.js
     window.orbType = parseInt(orbTypeSelect.value);
     window.aoIndex = parseInt(aspectOrbSetSelect.value);
+    window.poIndex = parseInt(planetOrbSetSelect.value);
     window.tfIndex = parseInt(traditionalFactorsSelect.value);
     window.precessionFlag = precessionCheckbox.checked ? 1 : 0;
-    
-    const birthYear = new Date(dateStr).getFullYear();
+
+    const birthYear = birthYearFromDate(dateStr);
     window.nativityYear = birthYear;
     window.nativity = birthYear;
 
@@ -469,7 +536,7 @@ function drawPlanets(centerX, centerY, radius, positions, ascendant) {
     const planetColour = ChartRenderer.getPlanetColourByLongitude(planet.longitude);
     const signIndex = getSignIndexFromLongitude(planet.longitude);
     const signName = SIGN_NAMES[signIndex];
-    const isRuling = RULING_PLANETS[signName] === planet.name;
+    const isRuling = ZodiacUtils.getSignRuler(signIndex) === planet.name;
 
     ctx.beginPath();
     ctx.arc(planet.x, planet.y, 12, 0, Math.PI * 2);
@@ -556,8 +623,10 @@ function buildRecordPayload(name) {
     lon: values.lon !== null ? String(values.lon) : '',
     orbType: orbTypeSelect.value,
     aspectOrbSet: aspectOrbSetSelect.value,
+    planetOrbSet: planetOrbSetSelect.value,
     traditionalFactors: traditionalFactorsSelect.value,
-    precession: precessionCheckbox.checked ? 1 : 0
+    precession: precessionCheckbox.checked ? 1 : 0,
+    tz: selectedTimeZone()
   });
 }
 
@@ -566,13 +635,20 @@ function applyRecord(rec, doCalculate=false, includeSettings=true) {
   if (rec.time) InputManager.setTime(rec.time);
   if (rec.lat) InputManager.setLatitude(parseFloat(rec.lat));
   if (rec.lon) InputManager.setLongitude(parseFloat(rec.lon));
+  // The time zone belongs to the birth data, not the engine settings
+  if (timeZoneSelect) {
+    timeZoneSelect.value = TimezoneHelper.isValidZone(rec.tz) ? rec.tz : '';
+  }
   if (includeSettings) {
     orbTypeSelect.value = rec.orbType || '0';
     aspectOrbSetSelect.value = rec.aspectOrbSet || '0';
+    planetOrbSetSelect.value = rec.planetOrbSet || '0';
     // Support both old and new property names for backward compatibility
     traditionalFactorsSelect.value = rec.traditionalFactors || rec.rulershipSet || '0';
     precessionCheckbox.checked = rec.precession === 1;
+    syncOrbControls();
   }
+  updateTimeZoneHint();
   if (doCalculate) {
     calculateChart();
   }
@@ -649,7 +725,8 @@ function switchToStarmatchMode() {
 
 function populateComparisonSelects() {
   const records = loadRecords();
-  const options = records.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+  const escape = UIManager.escapeHtml;
+  const options = records.map(r => `<option value="${escape(r.id)}">${escape(r.name)}</option>`).join('');
   if (subjectSelect) {
     subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>' + options;
   }
@@ -684,10 +761,12 @@ function loadTargetForComparison() {
 
 function displayPersonInfo(record, container) {
   if (!container) return;
+  const escape = UIManager.escapeHtml;
   container.innerHTML = `
     <div class="person-details">
-      <p><strong>Date:</strong> ${record.date} ${record.time}</p>
-      <p><strong>Location:</strong> ${record.lat}, ${record.lon}</p>
+      <p><strong>Date:</strong> ${escape(record.date)} ${escape(record.time)}</p>
+      <p><strong>Location:</strong> ${escape(record.lat)}, ${escape(record.lon)}</p>
+      <p><strong>Time zone:</strong> ${escape(record.tz || 'guessed from location')}</p>
     </div>
   `;
 }
@@ -814,6 +893,7 @@ locationLookupBtn?.addEventListener('click', () => {
       // Display the selected location name
       selectedLocationName.textContent = `📍 ${location.name} (${location.fullAddress})`;
       selectedLocationName.style.color = '#5ec5ff';
+      updateTimeZoneHint();
     });
   } else {
     showToast('Location picker not loaded', 'error');
@@ -836,6 +916,43 @@ btnClearAll?.addEventListener('click', () => {
   const existing = loadRecords();
   if (!existing.length) return;
   openDangerModal();
+});
+
+// Export / import records as a JSON file (backup, or moving between devices)
+btnExportRecords?.addEventListener('click', () => {
+  const records = loadRecords();
+  if (!records.length) {
+    showToast('No records to export', 'warning');
+    return;
+  }
+  const blob = new Blob([StorageManager.exportJSON()], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `starmatch-records-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  showToast(`Exported ${records.length} record${records.length === 1 ? '' : 's'}`, 'success');
+});
+
+btnImportRecords?.addEventListener('click', () => importRecordsFile?.click());
+
+importRecordsFile?.addEventListener('change', async () => {
+  const file = importRecordsFile.files[0];
+  importRecordsFile.value = '';
+  if (!file) return;
+  try {
+    const result = StorageManager.importJSON(await file.text());
+    renderRecords();
+    populateComparisonSelects();
+    const parts = [`Imported ${result.added}`];
+    if (result.duplicates) parts.push(`${result.duplicates} already saved`);
+    if (result.invalid) parts.push(`${result.invalid} invalid`);
+    showToast(parts.join(', '), result.added ? 'success' : 'warning', 4000);
+  } catch (e) {
+    showToast(`Import failed: ${e.message}`, 'error', 5000);
+  }
 });
 
 // Record item interactions
@@ -1003,21 +1120,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Mode switching - wrapped to ensure DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  if (btnChartMode) {
-    btnChartMode.addEventListener('click', (e) => {
-      switchToChartMode();
-    });
-  }
-  
-  if (btnStarmatchMode) {
-    btnStarmatchMode.addEventListener('click', (e) => {
-      switchToStarmatchMode();
-    });
-  }
-});
-
+// Mode switching (bound once; a second DOMContentLoaded binding fired every handler twice)
 btnChartMode?.addEventListener('click', switchToChartMode);
 btnStarmatchMode?.addEventListener('click', switchToStarmatchMode);
 
@@ -1160,6 +1263,22 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof InputManager !== 'undefined') {
     InputManager.init();
   }
+
+  populateTimeZones();
+  syncOrbControls();
+  updateTimeZoneHint();
+});
+
+orbTypeSelect.addEventListener('change', syncOrbControls);
+
+// Keep the time zone hint in step with the birth data. Deferred so InputManager
+// has copied picker values into the text inputs (its source of truth) first.
+const refreshTimeZoneHint = () => setTimeout(updateTimeZoneHint, 0);
+['birth-date', 'birth-date-text', 'birth-time', 'birth-time-text',
+ 'latitude', 'latitude-text', 'longitude', 'longitude-text', 'birth-tz'].forEach(id => {
+  const el = document.getElementById(id);
+  el?.addEventListener('change', refreshTimeZoneHint);
+  el?.addEventListener('input', refreshTimeZoneHint);
 });
 
 // Initialise

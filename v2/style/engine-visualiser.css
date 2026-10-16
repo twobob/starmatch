@@ -24,6 +24,24 @@ body {
   box-sizing: border-box;
 }
 
+/* Native dropdown lists can't be see-through: with the selects' translucent
+   backgrounds the browser drew them pale blue with near-white text. Give
+   every option list a solid dark background instead. */
+select option,
+select optgroup {
+  background-color: #141b29;
+  color: #e2eeff;
+}
+
+select option:disabled {
+  color: #6a7fa0;
+}
+
+select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* Action Row & Small Buttons */
 .action-row {
   display: flex;
@@ -796,6 +814,29 @@ h3 {
   grid-template-columns: 1fr 1fr auto;
 }
 
+.input-row.single {
+  grid-template-columns: 1fr;
+  margin-top: 0.75rem;
+}
+
+.field-hint {
+  font-size: 0.7rem;
+  color: #8fa8ce;
+  margin-top: 0.25rem;
+  min-height: 1em;
+}
+
+.field-hint.warning {
+  color: #ffd43b;
+}
+
+.records-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .location-lookup-btn {
   padding: 0.75rem 1rem;
   background: rgba(94, 197, 255, 0.15);
@@ -833,6 +874,7 @@ h3 {
 }
 
 .input-field input,
+.input-field select,
 .setting-row select {
   padding: 0.75rem;
   background: rgba(94, 197, 255, 0.08);
@@ -863,6 +905,7 @@ h3 {
 }
 
 .input-field input:focus,
+.input-field select:focus,
 .setting-row select:focus {
   outline: none;
   border-color: var(--accent);
@@ -1395,6 +1438,7 @@ canvas {
   }
   
   .input-field input,
+  .input-field select,
   .setting-row select {
     width: 100%;
     min-width: 0;
@@ -1631,3 +1675,85 @@ canvas {
 .sign-capricorn { color: #51cf66; }
 .sign-aquarius { color: #74c0fc; }
 .sign-pisces { color: #a78bfa; }
+
+/* ============================================================================
+   v2 layout fixes
+   ============================================================================ */
+
+/* A cog at a size that matches the title */
+.settings-btn svg {
+  width: 32px;
+  height: 32px;
+}
+
+/* One accent colour for every checkbox */
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+/* Long record names must not widen the Subject / Target columns */
+.subject-target-row {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.comparison-panel {
+  min-width: 0;
+}
+
+.record-select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+
+/* Toasts sit at the bottom so they never cover the header controls,
+   and fade out instead of vanishing */
+.toast-container {
+  top: auto;
+  bottom: 4rem;
+  max-width: min(400px, calc(100vw - 2rem));
+}
+
+.toast {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast.hiding {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+@media (max-width: 768px) {
+  .subject-target-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Label above control, so selections are not cut off */
+  .setting-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+  }
+
+  .setting-row select {
+    max-width: none;
+  }
+
+  /* Checkbox, then the buttons on their own row */
+  .records-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+
+  .records-footer-actions {
+    justify-content: flex-end;
+  }
+
+  .toast-container {
+    left: 1rem;
+    right: 1rem;
+    max-width: none;
+  }
+}

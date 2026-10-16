@@ -49,6 +49,43 @@ const CookieStorage = {
 // Storage abstraction layer
 const storage = hasLocalStorage ? localStorage : CookieStorage;
 
+/**
+ * Validate and normalise one imported record; null if it is unusable
+ */
+function sanitiseRecord(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const date = String(raw.date || '');
+  const time = String(raw.time || '');
+  const lat = parseFloat(raw.lat);
+  const lon = parseFloat(raw.lon);
+  if (!/^-?\d{1,6}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return null;
+  if (!(lat >= -90 && lat <= 90) || !(lon >= -180 && lon <= 180)) return null;
+
+  const pick = (value, allowed, fallback) => allowed.includes(String(value)) ? String(value) : fallback;
+  const id = typeof raw.id === 'string' && /^[A-Za-z0-9-]{1,64}$/.test(raw.id) ? raw.id : crypto.randomUUID();
+  const name = String(raw.name || '').trim().slice(0, 200) || 'Untitled';
+  const tz = typeof raw.tz === 'string' && typeof TimezoneHelper !== 'undefined' && TimezoneHelper.isValidZone(raw.tz) ? raw.tz : '';
+  const now = new Date().toISOString();
+
+  return {
+    id,
+    name,
+    date,
+    time,
+    lat: String(lat),
+    lon: String(lon),
+    orbType: pick(raw.orbType, ['0', '1'], '0'),
+    aspectOrbSet: pick(raw.aspectOrbSet, ['0', '1', '2', '3', '4'], '0'),
+    planetOrbSet: pick(raw.planetOrbSet, ['0', '1'], '0'),
+    traditionalFactors: pick(raw.traditionalFactors ?? raw.rulershipSet, ['0', '4', '8'], '0'),
+    precession: Number(raw.precession) === 1 ? 1 : 0,
+    tz,
+    createdAt: typeof raw.createdAt === 'string' ? raw.createdAt.slice(0, 40) : now,
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt.slice(0, 40) : now
+  };
+}
+
 const StorageManager = {
   /**
    * Load all records from storage
@@ -139,11 +176,67 @@ const StorageManager = {
       lon: inputs.lon || '',
       orbType: inputs.orbType || '0',
       aspectOrbSet: inputs.aspectOrbSet || '0',
+      planetOrbSet: inputs.planetOrbSet || '0',
       traditionalFactors: inputs.traditionalFactors || '0',
       precession: inputs.precession || 0,
+      tz: inputs.tz || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+  },
+
+  /**
+   * All records as a JSON document for download
+   * @returns {string} JSON text
+   */
+  exportJSON() {
+    return JSON.stringify({
+      format: 'starmatch-records',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      records: this.load()
+    }, null, 2);
+  },
+
+  /**
+   * Add records from an exported JSON document (or a bare array of records).
+   * Every field is checked; records whose id is already saved are skipped.
+   * @param {string} text - JSON text
+   * @returns {{added: number, duplicates: number, invalid: number}}
+   */
+  importJSON(text) {
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error('not a JSON file');
+    }
+    const incoming = Array.isArray(data) ? data : data && Array.isArray(data.records) ? data.records : null;
+    if (!incoming) throw new Error('no records found in the file');
+
+    const records = this.load();
+    // Same id, or the same person and birth data (ids may have been replaced)
+    const birthKey = r => [r.name, r.date, r.time, String(parseFloat(r.lat)), String(parseFloat(r.lon))].join('|');
+    const ids = new Set(records.map(r => r.id));
+    const births = new Set(records.map(birthKey));
+    const result = { added: 0, duplicates: 0, invalid: 0 };
+
+    incoming.forEach(raw => {
+      const rec = sanitiseRecord(raw);
+      if (!rec) {
+        result.invalid++;
+      } else if (ids.has(rec.id) || births.has(birthKey(rec))) {
+        result.duplicates++;
+      } else {
+        ids.add(rec.id);
+        births.add(birthKey(rec));
+        records.push(rec);
+        result.added++;
+      }
+    });
+
+    if (result.added) this.save(records);
+    return result;
   },
 
   /**

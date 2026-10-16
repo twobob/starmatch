@@ -1,114 +1,114 @@
 // ============================================================================
 // Astronomical Calculations - Astronomy Engine Integration
 // Planetary positions, angles, and coordinate transformations
+// All longitudes are tropical (ecliptic of date), 0° = 0° Aries
 // ============================================================================
 
-const AstroCalc = {
-  /**
-   * Get ecliptic longitude for a celestial body
-   * @param {string} bodyName - 'Sun', 'Moon', or planet name
-   * @param {Date} date - Date object
-   * @returns {number} Ecliptic longitude in degrees
-   */
-  getEclipticLongitude(bodyName, date) {
+const AstroCalc = (function() {
+  'use strict';
+
+  const DEG = Math.PI / 180;
+
+  function requireEngine() {
     if (!window.astronomyEngineReady || typeof Astronomy === 'undefined') {
       throw new Error('Astronomy Engine not loaded');
     }
-    
-    const time = Astronomy.MakeTime(date);
-    
-    if (bodyName === 'Sun') {
-      const ecliptic = Astronomy.SunPosition(time);
-      return ecliptic.elon;
-    } else if (bodyName === 'Moon') {
-      const moonEq = Astronomy.GeoMoon(time);
-      const moonEcl = Astronomy.Ecliptic(moonEq);
-      return moonEcl.elon;
-    } else {
-      const body = Astronomy.Body[bodyName];
-      const vec = Astronomy.GeoVector(body, time, true);
-      const ecliptic = Astronomy.Ecliptic(vec);
-      return ecliptic.elon;
-    }
-  },
-
-  /**
-   * Calculate Ascendant (rising sign)
-   * @param {Date} date - Date object
-   * @param {number} latitude - Geographic latitude in degrees
-   * @param {number} longitude - Geographic longitude in degrees
-   * @returns {number} Ascendant ecliptic longitude in degrees
-   */
-  calculateAscendant(date, latitude, longitude) {
-    const time = Astronomy.MakeTime(date);
-    const gmst = Astronomy.SiderealTime(time);
-    
-    let lst = (gmst * 15.0 + longitude) % 360;
-    if (lst < 0) lst += 360;
-    
-    const jd = (date.getTime() / 86400000) + 2440587.5;
-    const T = (jd - 2451545.0) / 36525.0;
-    const eps = 23.439292 - 0.0130042 * T - 0.00000016 * T * T + 0.000000504 * T * T * T;
-    
-    const lstRad = lst * Math.PI / 180.0;
-    const epsRad = eps * Math.PI / 180.0;
-    const latRad = latitude * Math.PI / 180.0;
-    
-    const y = -Math.cos(lstRad);
-    const x = Math.sin(lstRad) * Math.cos(epsRad) + Math.tan(latRad) * Math.sin(epsRad);
-    
-    let asc = Math.atan2(y, x) * 180.0 / Math.PI;
-    
-    while (asc < 0) asc += 360;
-    while (asc >= 360) asc -= 360;
-    
-    asc = (asc + 209.917) % 360;
-    
-    return asc;
-  },
-
-  /**
-   * Calculate Midheaven (MC)
-   * @param {Date} date - Date object
-   * @param {number} longitude - Geographic longitude in degrees
-   * @returns {number} Midheaven ecliptic longitude in degrees
-   */
-  calculateMidheaven(date, longitude) {
-    const jd = (date.getTime() / 86400000) + 2440587.5;
-    const T = (jd - 2451545.0) / 36525.0;
-    const gmst = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 
-                 0.000387933 * T * T - (T * T * T) / 38710000.0;
-    let lst = (gmst + longitude) % 360;
-    if (lst < 0) lst += 360;
-    let mc = lst % 360;
-    if (mc < 0) mc += 360;
-    return mc;
-  },
-
-  /**
-   * Convert local date/time to UTC
-   * @param {string} dateStr - Date string (YYYY-MM-DD)
-   * @param {string} timeStr - Time string (HH:MM)
-   * @param {number} latitude - Geographic latitude
-   * @param {number} longitude - Geographic longitude
-   * @returns {Date|null} UTC Date object or null if invalid
-   */
-  toUTC(dateStr, timeStr, latitude, longitude) {
-    if (typeof window.TimezoneHelper !== 'undefined') {
-      const result = window.TimezoneHelper.localToUTC(dateStr, timeStr, latitude, longitude);
-      if (result) {
-        return result.utcDate;
-      }
-    }
-    
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
-    const t = /^(\d{2}):(\d{2})$/.exec(timeStr);
-    if (!m || !t) return null;
-    const [_, Y, M, D] = m;
-    const [__, h, min] = t;
-    return new Date(Date.UTC(+Y, +M - 1, +D, +h, +min, 0, 0));
   }
-};
+
+  // Mean obliquity of the ecliptic in degrees (IAU 1976 polynomial)
+  function obliquity(date) {
+    const jd = (date.getTime() / 86400000) + 2440587.5;
+    const T = (jd - 2451545.0) / 36525.0;
+    return 23.439292 - 0.0130042 * T - 0.00000016 * T * T + 0.000000504 * T * T * T;
+  }
+
+  // Right ascension of the meridian (local apparent sidereal time as an angle)
+  function ramc(date, longitude) {
+    const gast = Astronomy.SiderealTime(Astronomy.MakeTime(date));  // hours
+    return (((gast * 15 + longitude) % 360) + 360) % 360;
+  }
+
+  function normalise(degrees) {
+    return ((degrees % 360) + 360) % 360;
+  }
+
+  return {
+    /**
+     * Get ecliptic longitude for a celestial body
+     * @param {string} bodyName - 'Sun', 'Moon', or planet name
+     * @param {Date} date - Date object (UTC instant)
+     * @returns {number} Ecliptic longitude in degrees
+     */
+    getEclipticLongitude(bodyName, date) {
+      requireEngine();
+      const time = Astronomy.MakeTime(date);
+
+      if (bodyName === 'Sun') {
+        return Astronomy.SunPosition(time).elon;
+      } else if (bodyName === 'Moon') {
+        return Astronomy.Ecliptic(Astronomy.GeoMoon(time)).elon;
+      }
+      const vec = Astronomy.GeoVector(Astronomy.Body[bodyName], time, true);
+      return Astronomy.Ecliptic(vec).elon;
+    },
+
+    /**
+     * Calculate Ascendant: the ecliptic longitude rising on the eastern horizon
+     * @param {Date} date - Date object (UTC instant)
+     * @param {number} latitude - Geographic latitude in degrees (north positive)
+     * @param {number} longitude - Geographic longitude in degrees (east positive)
+     * @returns {number} Ascendant ecliptic longitude in degrees
+     */
+    calculateAscendant(date, latitude, longitude) {
+      requireEngine();
+      const r = ramc(date, longitude) * DEG;
+      const eps = obliquity(date) * DEG;
+      const lat = latitude * DEG;
+      const asc = Math.atan2(
+        Math.cos(r),
+        -(Math.sin(r) * Math.cos(eps) + Math.tan(lat) * Math.sin(eps))
+      );
+      return normalise(asc / DEG);
+    },
+
+    /**
+     * Calculate Midheaven (MC): the ecliptic longitude on the upper meridian
+     * @param {Date} date - Date object (UTC instant)
+     * @param {number} longitude - Geographic longitude in degrees (east positive)
+     * @returns {number} Midheaven ecliptic longitude in degrees
+     */
+    calculateMidheaven(date, longitude) {
+      requireEngine();
+      const r = ramc(date, longitude) * DEG;
+      const eps = obliquity(date) * DEG;
+      return normalise(Math.atan2(Math.sin(r), Math.cos(r) * Math.cos(eps)) / DEG);
+    },
+
+    /**
+     * Convert local birth date/time to a UTC instant
+     * @param {string} dateStr - Date string (YYYY-MM-DD)
+     * @param {string} timeStr - Time string (HH:MM), local clock time
+     * @param {number} latitude - Geographic latitude
+     * @param {number} longitude - Geographic longitude
+     * @param {string} [timeZone] - IANA time zone; guessed from the location if omitted
+     * @returns {Date|null} UTC Date object or null if invalid
+     */
+    toUTC(dateStr, timeStr, latitude, longitude, timeZone) {
+      if (typeof window.TimezoneHelper !== 'undefined') {
+        const result = window.TimezoneHelper.localToUTC(dateStr, timeStr, latitude, longitude, timeZone);
+        return result ? result.utcDate : null;
+      }
+
+      const m = /^(-?\d{1,6})-(\d{2})-(\d{2})$/.exec(dateStr);
+      const t = /^(\d{2}):(\d{2})$/.exec(timeStr);
+      if (!m || !t) return null;
+      const d = new Date(0);
+      d.setUTCFullYear(+m[1], +m[2] - 1, +m[3]);
+      d.setUTCHours(+t[1], +t[2], 0, 0);
+      return d;
+    }
+  };
+})();
 
 if (typeof window !== 'undefined') {
   window.AstroCalc = AstroCalc;

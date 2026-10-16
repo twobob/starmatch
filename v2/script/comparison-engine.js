@@ -47,8 +47,8 @@
         return null;
       }
       
-      // Create UTC date from record - MUST PASS LAT/LON FOR TIMEZONE LOOKUP
-      const date = AstroCalc.toUTC(record.date, record.time, latitude, longitude);
+      // Create UTC date from record, in its saved time zone (or one guessed from lat/lon)
+      const date = AstroCalc.toUTC(record.date, record.time, latitude, longitude, record.tz);
       if (!date) {
         console.error('calculateChartForRecord: Invalid date/time in record');
         return null;
@@ -56,12 +56,9 @@
       
       const positions = {};
       
-      // Calculate planetary positions using Astronomy Engine
+      // Calculate planetary positions using Astronomy Engine (tropical longitudes)
       for (const planet of PLANET_NAMES) {
-        positions[planet] = AstroCalc.getEclipticLongitude(planet, date) + 30;
-        if (positions[planet] >= 360) {
-          positions[planet] -= 360;
-        }
+        positions[planet] = AstroCalc.getEclipticLongitude(planet, date);
       }
       
       let ascendant = AstroCalc.calculateAscendant(date, latitude, longitude);
@@ -71,11 +68,13 @@
       if (typeof orbTypeSelect !== 'undefined') {
         window.orbType = parseInt(orbTypeSelect.value);
         window.aoIndex = parseInt(aspectOrbSetSelect.value);
+        window.poIndex = typeof planetOrbSetSelect !== 'undefined' ? parseInt(planetOrbSetSelect.value) : 0;
         window.tfIndex = parseInt(traditionalFactorsSelect.value);
         window.precessionFlag = precessionCheckbox.checked ? 1 : 0;
       }
       
-      const birthYear = new Date(record.date).getFullYear();
+      // Year straight from YYYY-MM-DD (new Date() reads it as UTC midnight)
+      const birthYear = parseInt(record.date, 10);
       window.nativityYear = birthYear;
       window.nativity = birthYear;
 
@@ -151,13 +150,17 @@
   // ============================================================================
 
   /**
-   * Calculate xProfile value using cosine similarity between theme vectors
-   * Range: -1 (inverted/complementary) to +1 (identical/similar)
-   * Near 0: Balanced/equal relationship (optimal)
-   * 
+   * Calculate xProfile value: correlation of the two 12-theme profiles (Pearson)
+   * Per engineDocs/xProfileValues.txt:
+   *   +1 = similar (chart of the same shape as the subject)
+   *    0 = equality/balance
+   *   -1 = complementary (shape inverted relative to the subject)
+   * Themes are centred on their own mean first; without that (plain cosine
+   * similarity of non-negative themes) the value could never go below 0.
+   *
    * @param {Array<number>} subjectThemes - 12-element theme array for subject
    * @param {Array<number>} targetThemes - 12-element theme array for target
-   * @returns {number} xProfile value between -1 and +1
+   * @returns {number} xProfile value between -1 and +1 (0 if either profile is flat)
    */
   function calculateXProfileValue(subjectThemes, targetThemes) {
     if (!Array.isArray(subjectThemes) || !Array.isArray(targetThemes)) {
@@ -170,25 +173,31 @@
       return 0;
     }
     
+    const s = subjectThemes.map(v => parseFloat(v) || 0);
+    const t = targetThemes.map(v => parseFloat(v) || 0);
+    const meanS = s.reduce((sum, v) => sum + v, 0) / 12;
+    const meanT = t.reduce((sum, v) => sum + v, 0) / 12;
+
     let sumProduct = 0;
     let sumSubjectSq = 0;
     let sumTargetSq = 0;
-    
+
     for (let i = 0; i < 12; i++) {
-      const s = parseFloat(subjectThemes[i]) || 0;
-      const t = parseFloat(targetThemes[i]) || 0;
-      
-      sumProduct += s * t;
-      sumSubjectSq += s * s;
-      sumTargetSq += t * t;
+      const ds = s[i] - meanS;
+      const dt = t[i] - meanT;
+      sumProduct += ds * dt;
+      sumSubjectSq += ds * ds;
+      sumTargetSq += dt * dt;
     }
-    
+
     const denominator = Math.sqrt(sumSubjectSq * sumTargetSq);
-    return denominator !== 0 ? sumProduct / denominator : 0;
+    if (!(denominator > 1e-12)) return 0;
+    return Math.max(-1, Math.min(1, sumProduct / denominator));
   }
 
   /**
    * Interpret xProfile value into relationship type with color and description
+   * Bands follow engineDocs/README.md: within ±0.2 balanced, ±0.8 to ±1 extreme
    * @param {number} xProfileValue - Value between -1 and +1
    * @returns {Object} Relationship type interpretation
    */
@@ -202,7 +211,7 @@
         description: 'Optimal for long-lasting, significant relationships. A balanced blend of similarity and complementarity.',
         significance: 'High'
       };
-    } else if (xProfileValue > 0.7) {
+    } else if (xProfileValue >= 0.8) {
       return {
         type: 'Strong Similarity',
         color: '#74c0fc',
@@ -216,7 +225,7 @@
         description: 'Similar energies with some variation. Good compatibility with room for growth.',
         significance: 'Good'
       };
-    } else if (xProfileValue < -0.7) {
+    } else if (xProfileValue <= -0.8) {
       return {
         type: 'Strong Complementarity',
         color: '#b85eff',

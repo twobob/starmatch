@@ -21,7 +21,7 @@ const UIManager = (function() {
     if (!container) return;
 
     const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
+    toast.className = `toast ${type}`;  // matches .toast.success / .error / .warning / .info
     toast.textContent = message;
     
     container.appendChild(toast);
@@ -29,7 +29,7 @@ const UIManager = (function() {
     setTimeout(() => toast.classList.add('show'), 10);
     
     setTimeout(() => {
-      toast.classList.remove('show');
+      toast.classList.add('hiding');
       setTimeout(() => toast.remove(), 300);
     }, duration);
   }
@@ -81,17 +81,18 @@ const UIManager = (function() {
       // Create actions row (all buttons together)
       const actionsRow = document.createElement('div');
       actionsRow.className = 'record-actions-row';
+      const id = escapeHtml(rec.id);
       actionsRow.innerHTML = `
-        <button class="pill-btn" data-action="load" data-id="${rec.id}" title="Load & Calculate">Load</button>
-        <button class="pill-btn" data-action="overwrite" data-id="${rec.id}" title="Overwrite this saved record with current inputs/settings">Overwrite</button>
-        <button class="pill-btn danger" data-action="del" data-id="${rec.id}">Del</button>`;
+        <button class="pill-btn" data-action="load" data-id="${id}" title="Load & Calculate">Load</button>
+        <button class="pill-btn" data-action="overwrite" data-id="${id}" title="Overwrite this saved record with current inputs/settings">Overwrite</button>
+        <button class="pill-btn danger" data-action="del" data-id="${id}">Del</button>`;
       
       // Create metadata row
       const metaRow = document.createElement('div');
       metaRow.className = 'record-meta-row';
       metaRow.innerHTML = `
-        <span class="record-meta">${rec.date || '—'} ${rec.time || ''}</span>
-        <span class="record-meta">${rec.lat || '—'}, ${rec.lon || '—'}</span>`;
+        <span class="record-meta">${escapeHtml(rec.date || '—')} ${escapeHtml(rec.time || '')}</span>
+        <span class="record-meta">${escapeHtml(rec.lat || '—')}, ${escapeHtml(rec.lon || '—')}</span>`;
       
       // Append all elements in correct order
       el.appendChild(nameEl);
@@ -177,6 +178,12 @@ const UIManager = (function() {
     };
   }
 
+  // Escape text for use inside innerHTML (record names and fields can come from imported files)
+  function escapeHtml(value) {
+    return String(value === undefined || value === null ? '' : value).replace(/[&<>"']/g,
+      c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  }
+
   function distanceToLineSegment(px, py, x1, y1, x2, y2) {
     const A = px - x1;
     const B = py - y1;
@@ -215,20 +222,15 @@ const UIManager = (function() {
         const distance = Math.sqrt((mouseX - planet.x) ** 2 + (mouseY - planet.y) ** 2);
         
         if (distance <= planetRadius) {
-          // Calculate sign from visual position on canvas
-          const dx = planet.x - chartData.centerX;
-          const dy = planet.y - chartData.centerY;
-          let angle_rad = Math.atan2(dy, dx);
-          let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
-          let zodiacLon = ((-canvas_angle + 180 + chartData.ascendant) % 360 + 360) % 360;
+          const zodiacLon = planet.longitude;
           
           const signIndex = getSignIndexFromLongitude(zodiacLon);
           const signName = AstroConstants.SIGN_NAMES[signIndex];
           const degree = zodiacLon % 30;
           const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
-          const quality = AstroConstants.QUALITY_NAMES[Math.floor(signIndex / 4)];
+          const quality = AstroConstants.QUALITY_NAMES[signIndex % 3];
           const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
-          const isRuling = AstroConstants.RULING_PLANETS[signName] === planet.name;
+          const isRuling = ZodiacUtils.getSignRuler(signIndex) === planet.name;
           
           return {
             type: 'planet',
@@ -258,9 +260,7 @@ const UIManager = (function() {
     const distance = distanceToLineSegment(mouseX, mouseY, x1, y1, x2, y2);
     
     if (distance <= 8) {
-      // Adjust for zodiac wheel rotation when displaying tooltip
-      const adjustedAsc = (chartData.ascendant - AstroConstants.ZODIAC_ROTATION_OFFSET + 360) % 360;
-      const { signName, degree } = getSignInfo(adjustedAsc);
+      const { signName, degree } = getSignInfo(chartData.ascendant);
       
       return {
         type: 'ascendant',
@@ -293,8 +293,8 @@ const UIManager = (function() {
         const p1Element = AstroConstants.ELEMENT_NAMES[p1SignIndex % 4];
         const p2Element = AstroConstants.ELEMENT_NAMES[p2SignIndex % 4];
         
-        const p1Quality = AstroConstants.QUALITY_NAMES[Math.floor(p1SignIndex / 4)];
-        const p2Quality = AstroConstants.QUALITY_NAMES[Math.floor(p2SignIndex / 4)];
+        const p1Quality = AstroConstants.QUALITY_NAMES[p1SignIndex % 3];
+        const p2Quality = AstroConstants.QUALITY_NAMES[p2SignIndex % 3];
         
         const p1Polarity = (p1Element === 'Fire' || p1Element === 'Air') ? '+' : '-';
         const p2Polarity = (p2Element === 'Fire' || p2Element === 'Air') ? '+' : '-';
@@ -332,7 +332,7 @@ const UIManager = (function() {
       const signIndex = getSignIndexFromLongitude(zodiacLon);
       const signName = AstroConstants.SIGN_NAMES[signIndex];
       const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
-      const quality = AstroConstants.QUALITY_NAMES[Math.floor(signIndex / 4)];
+      const quality = AstroConstants.QUALITY_NAMES[signIndex % 3];
       const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
       
       return {
@@ -439,7 +439,10 @@ const UIManager = (function() {
     // Tooltips
     updateTooltip,
     getMousePos,
-    distanceToLineSegment
+    distanceToLineSegment,
+
+    // Safe HTML
+    escapeHtml
   };
 })();
 

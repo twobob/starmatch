@@ -64,22 +64,12 @@ const ComparisonChartRenderer = (function() {
   function drawDualPersonPlanets(compCtx, subjectPlanetsArray, targetPlanetsArray) {
     const planetSymbols = ['☉', '☽', '☿', '♀', '♂', '♃', '♄', '⛢', '♆', '♇'];
     
-    // Helper to get ruling planet for a sign
-    const getRulingPlanet = (signName) => {
-      const rulingPlanets = {
-        'Aries': 'Mars', 'Taurus': 'Venus', 'Gemini': 'Mercury', 'Cancer': 'Moon',
-        'Leo': 'Sun', 'Virgo': 'Mercury', 'Libra': 'Venus', 'Scorpio': 'Pluto',
-        'Sagittarius': 'Jupiter', 'Capricorn': 'Saturn', 'Aquarius': 'Uranus', 'Pisces': 'Neptune'
-      };
-      return rulingPlanets[signName];
-    };
-    
     // Draw subject planets (outer ring)
     subjectPlanetsArray.forEach((planet) => {
       const planetColour = ChartRenderer.getPlanetColourByLongitude(planet.longitude);
       const signIndex = getSignIndexFromLongitude(planet.longitude);
       const signName = AstroConstants.SIGN_NAMES[signIndex];
-      const isRuling = getRulingPlanet(signName) === planet.name;
+      const isRuling = ZodiacUtils.getSignRuler(signIndex) === planet.name;
       
       compCtx.beginPath();
       compCtx.arc(planet.x, planet.y, 10, 0, Math.PI * 2);
@@ -101,7 +91,7 @@ const ComparisonChartRenderer = (function() {
       const planetColour = ChartRenderer.getPlanetColourByLongitude(planet.longitude);
       const signIndex = getSignIndexFromLongitude(planet.longitude);
       const signName = AstroConstants.SIGN_NAMES[signIndex];
-      const isRuling = getRulingPlanet(signName) === planet.name;
+      const isRuling = ZodiacUtils.getSignRuler(signIndex) === planet.name;
       
       compCtx.beginPath();
       compCtx.arc(planet.x, planet.y, 10, 0, Math.PI * 2);
@@ -128,8 +118,7 @@ const ComparisonChartRenderer = (function() {
     if (diff < 0) diff += 360;
     
     // Convert to canvas angle: start at 180° (9 o'clock) and subtract the difference
-    // Apply COMPARISON_ZODIAC_ROTATION_OFFSET to align with rotated zodiac wheel
-    const targetAscAngle = ((180 - diff + AstroConstants.COMPARISON_ZODIAC_ROTATION_OFFSET) * Math.PI) / 180;
+    const targetAscAngle = ((180 - diff) * Math.PI) / 180;
     
     compCtx.beginPath();
     compCtx.moveTo(centerX, centerY);
@@ -225,8 +214,7 @@ const ComparisonChartRenderer = (function() {
         const planetColour = ChartRenderer.getPlanetColourByLongitude(planet.longitude);
         const signIndex = getSignIndexFromLongitude(planet.longitude);
         const signName = AstroConstants.SIGN_NAMES[signIndex];
-        const rulingPlanets = AstroConstants.RULING_PLANETS;
-        const isRuling = rulingPlanets[signName] === planet.name;
+        const isRuling = ZodiacUtils.getSignRuler(signIndex) === planet.name;
         
         compCtx.globalAlpha = subjectPlanetOpacity;
         compCtx.beginPath();
@@ -250,8 +238,7 @@ const ComparisonChartRenderer = (function() {
         const planetColour = ChartRenderer.getPlanetColourByLongitude(planet.longitude);
         const signIndex = getSignIndexFromLongitude(planet.longitude);
         const signName = AstroConstants.SIGN_NAMES[signIndex];
-        const rulingPlanets = AstroConstants.RULING_PLANETS;
-        const isRuling = rulingPlanets[signName] === planet.name;
+        const isRuling = ZodiacUtils.getSignRuler(signIndex) === planet.name;
         
         compCtx.globalAlpha = targetPlanetOpacity;
         compCtx.beginPath();
@@ -274,7 +261,7 @@ const ComparisonChartRenderer = (function() {
       // The zodiac wheel is rotated so subject's ascendant is at 9 o'clock (180°)
       let diff = targetAsc - subjectAsc;
       if (diff < 0) diff += 360;
-      const targetAscAngle = ((180 - diff + AstroConstants.COMPARISON_ZODIAC_ROTATION_OFFSET) * Math.PI) / 180;
+      const targetAscAngle = ((180 - diff) * Math.PI) / 180;
       
       compCtx.globalAlpha = targetPlanetOpacity;
       compCtx.beginPath();
@@ -317,9 +304,9 @@ const ComparisonChartRenderer = (function() {
             const signName = AstroConstants.SIGN_NAMES[signIndex];
             const degree = zodiacLon % 30;
             const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
-            const quality = AstroConstants.QUALITY_NAMES[Math.floor(signIndex / 4)];
+            const quality = AstroConstants.QUALITY_NAMES[signIndex % 3];
             const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
-            const isRuling = AstroConstants.RULING_PLANETS[signName] === planet.name;
+            const isRuling = ZodiacUtils.getSignRuler(signIndex) === planet.name;
             
             return {
               type: 'subject-planet',
@@ -346,9 +333,9 @@ const ComparisonChartRenderer = (function() {
             const signName = AstroConstants.SIGN_NAMES[signIndex];
             const degree = zodiacLon % 30;
             const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
-            const quality = AstroConstants.QUALITY_NAMES[Math.floor(signIndex / 4)];
+            const quality = AstroConstants.QUALITY_NAMES[signIndex % 3];
             const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
-            const isRuling = AstroConstants.RULING_PLANETS[signName] === planet.name;
+            const isRuling = ZodiacUtils.getSignRuler(signIndex) === planet.name;
             
             return {
               type: 'target-planet',
@@ -386,12 +373,10 @@ const ComparisonChartRenderer = (function() {
             person: currentSubject.name
           };
         }
-        // Adjust for zodiac wheel rotation when displaying tooltip
-        const adjustedAsc = (compChartData.subjectAsc - AstroConstants.ZODIAC_ROTATION_OFFSET + 360) % 360;
-        const { signName, degree } = getSignInfo(adjustedAsc);
-        const signIndex = getSignIndexFromLongitude(adjustedAsc);
+        const { signName, degree } = getSignInfo(compChartData.subjectAsc);
+        const signIndex = getSignIndexFromLongitude(compChartData.subjectAsc);
         const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
-        const quality = AstroConstants.QUALITY_NAMES[Math.floor(signIndex / 4)];
+        const quality = AstroConstants.QUALITY_NAMES[signIndex % 3];
         const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
         
         return {
@@ -406,7 +391,7 @@ const ComparisonChartRenderer = (function() {
       // Target ascendant (purple) - offset from subject's 9 o'clock position
       let diff = compChartData.targetAsc - compChartData.subjectAsc;
       if (diff < 0) diff += 360;
-      const targetAscAngle = ((180 - diff + AstroConstants.COMPARISON_ZODIAC_ROTATION_OFFSET) * Math.PI) / 180;
+      const targetAscAngle = ((180 - diff) * Math.PI) / 180;
       const targetAscX = centerX + Math.cos(targetAscAngle) * innerRadius;
       const targetAscY = centerY + Math.sin(targetAscAngle) * innerRadius;
       
@@ -424,7 +409,7 @@ const ComparisonChartRenderer = (function() {
         const { signName, degree } = getSignInfo(compChartData.targetAsc);
         const signIndex = getSignIndexFromLongitude(compChartData.targetAsc);
         const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
-        const quality = AstroConstants.QUALITY_NAMES[Math.floor(signIndex / 4)];
+        const quality = AstroConstants.QUALITY_NAMES[signIndex % 3];
         const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
         
         return {
@@ -447,13 +432,12 @@ const ComparisonChartRenderer = (function() {
       if (distance >= compChartData.innerRadius && distance <= compChartData.outerRadius) {
         let angle_rad = Math.atan2(dy, dx);
         let canvas_angle = (angle_rad * 180 / Math.PI + 360) % 360;
-        // Account for the comparison chart rotation offset
-        let zodiacLon = ((-canvas_angle - 180 + compChartData.subjectAsc + AstroConstants.COMPARISON_ZODIAC_ROTATION_OFFSET) % 360 + 360) % 360;
+        let zodiacLon = ((-canvas_angle - 180 + compChartData.subjectAsc) % 360 + 360) % 360;
         
         const signIndex = getSignIndexFromLongitude(zodiacLon);
         const signName = AstroConstants.SIGN_NAMES[signIndex];
         const element = AstroConstants.ELEMENT_NAMES[signIndex % 4];
-        const quality = AstroConstants.QUALITY_NAMES[Math.floor(signIndex / 4)];
+        const quality = AstroConstants.QUALITY_NAMES[signIndex % 3];
         const polarity = (element === 'Fire' || element === 'Air') ? '+' : '-';
         
         return {
@@ -490,8 +474,8 @@ const ComparisonChartRenderer = (function() {
             orb: aspect.orb,
             p1Sign: AstroConstants.SIGN_NAMES[p1SignIndex],
             p2Sign: AstroConstants.SIGN_NAMES[p2SignIndex],
-            p1Quality: AstroConstants.QUALITY_NAMES[Math.floor(p1SignIndex / 4)],
-            p2Quality: AstroConstants.QUALITY_NAMES[Math.floor(p2SignIndex / 4)],
+            p1Quality: AstroConstants.QUALITY_NAMES[p1SignIndex % 3],
+            p2Quality: AstroConstants.QUALITY_NAMES[p2SignIndex % 3],
             p1Element: AstroConstants.ELEMENT_NAMES[p1SignIndex % 4],
             p2Element: AstroConstants.ELEMENT_NAMES[p2SignIndex % 4],
             p1Polarity: (AstroConstants.ELEMENT_NAMES[p1SignIndex % 4] === 'Fire' || AstroConstants.ELEMENT_NAMES[p1SignIndex % 4] === 'Air') ? '+' : '-',
@@ -523,8 +507,8 @@ const ComparisonChartRenderer = (function() {
             orb: aspect.orb,
             p1Sign: AstroConstants.SIGN_NAMES[p1SignIndex],
             p2Sign: AstroConstants.SIGN_NAMES[p2SignIndex],
-            p1Quality: AstroConstants.QUALITY_NAMES[Math.floor(p1SignIndex / 4)],
-            p2Quality: AstroConstants.QUALITY_NAMES[Math.floor(p2SignIndex / 4)],
+            p1Quality: AstroConstants.QUALITY_NAMES[p1SignIndex % 3],
+            p2Quality: AstroConstants.QUALITY_NAMES[p2SignIndex % 3],
             p1Element: AstroConstants.ELEMENT_NAMES[p1SignIndex % 4],
             p2Element: AstroConstants.ELEMENT_NAMES[p2SignIndex % 4],
             p1Polarity: (AstroConstants.ELEMENT_NAMES[p1SignIndex % 4] === 'Fire' || AstroConstants.ELEMENT_NAMES[p1SignIndex % 4] === 'Air') ? '+' : '-',
@@ -562,41 +546,41 @@ const ComparisonChartRenderer = (function() {
         
         if (hoverInfo.type === 'subject-planet') {
           tooltipHTML = `
-            <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign} (${hoverInfo.person})</div>
+            <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign} (${UIManager.escapeHtml(hoverInfo.person)})</div>
             <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>${hoverInfo.isRuling ? '<div style="font-size: 0.8rem; color: #ffd700; margin-top: 0.25rem;">⚡ Ruling Planet</div>' : ''}
           `;
         } else if (hoverInfo.type === 'target-planet') {
           tooltipHTML = `
-            <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign} (${hoverInfo.person})</div>
+            <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">${hoverInfo.name} IN ${hoverInfo.sign} (${UIManager.escapeHtml(hoverInfo.person)})</div>
             <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>${hoverInfo.isRuling ? '<div style="font-size: 0.8rem; color: #ffd700; margin-top: 0.25rem;">⚡ Ruling Planet</div>' : ''}
           `;
         } else if (hoverInfo.type === 'subject-ascendant') {
           if (hoverInfo.degree !== undefined) {
             tooltipHTML = `
-              <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">ASCENDANT (${hoverInfo.person})</div>
+              <div style="font-weight: 600; color: #74c0fc; margin-bottom: 0.25rem;">ASCENDANT (${UIManager.escapeHtml(hoverInfo.person)})</div>
               <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.sign} ${hoverInfo.degree.toFixed(2)}°</div>
               <div style="font-size: 0.75rem; color: #8fa8ce; margin-top: 0.25rem;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>
             `;
           } else {
             tooltipHTML = `
-              <div style="font-weight: 600; color: #74c0fc;">ASCENDANT (${hoverInfo.person})</div>
+              <div style="font-weight: 600; color: #74c0fc;">ASCENDANT (${UIManager.escapeHtml(hoverInfo.person)})</div>
             `;
           }
         } else if (hoverInfo.type === 'target-ascendant') {
           if (hoverInfo.degree !== undefined) {
             tooltipHTML = `
-              <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">ASCENDANT (${hoverInfo.person})</div>
+              <div style="font-weight: 600; color: #b85eff; margin-bottom: 0.25rem;">ASCENDANT (${UIManager.escapeHtml(hoverInfo.person)})</div>
               <div style="font-size: 0.85rem; color: #b8d0f0;">${hoverInfo.sign} ${hoverInfo.degree.toFixed(2)}°</div>
               <div style="font-size: 0.75rem; color: #8fa8ce; margin-top: 0.25rem;">${hoverInfo.quality} ${hoverInfo.polarity} ${hoverInfo.element}</div>
             `;
           } else {
             tooltipHTML = `
-              <div style="font-weight: 600; color: #b85eff;">ASCENDANT (${hoverInfo.person})</div>
+              <div style="font-weight: 600; color: #b85eff;">ASCENDANT (${UIManager.escapeHtml(hoverInfo.person)})</div>
             `;
           }
         } else if (hoverInfo.type === 'aspect') {
           tooltipHTML = `
-            <div style="font-weight: 600; color: ${hoverInfo.color}; margin-bottom: 0.5rem;">${hoverInfo.aspectType} (${hoverInfo.person})</div>
+            <div style="font-weight: 600; color: ${hoverInfo.color}; margin-bottom: 0.5rem;">${hoverInfo.aspectType} (${UIManager.escapeHtml(hoverInfo.person)})</div>
             <div style="display: flex; gap: 1rem; font-size: 0.8rem;">
               <div>
                 <div style="color: #b8d0f0; margin-bottom: 0.25rem;">${hoverInfo.planet1} in ${hoverInfo.p1Sign}</div>

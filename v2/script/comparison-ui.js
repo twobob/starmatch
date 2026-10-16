@@ -73,7 +73,7 @@
         
         ${Math.abs(xProfileValue) < 0.2 ? 
           '<div style="margin-top: 1rem; padding: 0.75rem; background: rgba(81,207,102,0.15); border-radius: 6px; border: 1px solid rgba(81,207,102,0.3); font-size: 0.8rem; color: #51cf66;">★ Optimal balance for long-lasting partnerships</div>' : 
-          Math.abs(xProfileValue) > 0.7 ?
+          Math.abs(xProfileValue) >= 0.8 ?
           '<div style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,212,59,0.15); border-radius: 6px; border: 1px solid rgba(255,212,59,0.3); font-size: 0.8rem; color: #ffd43b;">⚠ Extreme values suggest good relationships but less likely for deep partnerships</div>' :
           ''}
       </div>
@@ -85,9 +85,9 @@
         <h4 style="color: var(--accent); margin-top: 0; margin-bottom: 0.75rem; font-size: 0.9rem;">Chart Overlay</h4>
         <canvas id="comparison-chart-canvas" width="400" height="400" style="width: 100%; max-width: 400px; aspect-ratio: 1/1; display: block; margin: 0 auto;"></canvas>
         <div id="comparison-tooltip" class="chart-tooltip"></div>
-        <div style="margin-top: 0.75rem; font-size: 0.7rem; color: #8fa8ce; display: flex; justify-content: center; gap: 1.5rem;">
-          <div><span style="color: #74c0fc;">●</span> Subject (${currentSubject.name})</div>
-          <div><span style="color: #b85eff;">●</span> Target (${currentTarget.name})</div>
+        <div style="margin-top: 0.75rem; font-size: 0.7rem; color: #8fa8ce; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.5rem;">
+          <div style="flex: 1 1 10rem; text-align: center;"><span style="color: #74c0fc;">●</span> Subject (${UIManager.escapeHtml(currentSubject.name)})</div>
+          <div style="flex: 1 1 10rem; text-align: center;"><span style="color: #b85eff;">●</span> Target (${UIManager.escapeHtml(currentTarget.name)})</div>
         </div>
       </div>
     </div>`;
@@ -111,7 +111,7 @@
           
           <!-- Subject bar (left side, blue) -->
           <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 0.3rem;">
-            <div style="font-family: 'Fira Code', monospace; font-size: 0.7rem; color: #74c0fc; min-width: 35px; text-align: right;">${subjectVal.toFixed(1)}</div>
+            <div style="font-family: 'Fira Code', monospace; font-size: 0.7rem; color: #74c0fc; min-width: 35px; text-align: right;">${subjectVal.toFixed(2)}</div>
             <div style="width: 100%; height: 20px; background: rgba(10,13,19,0.8); border-radius: 3px; overflow: hidden; border: 1px solid rgba(116,197,252,0.3); position: relative;">
               <div style="position: absolute; right: 0; height: 100%; width: ${subjectPercent}%; background: linear-gradient(90deg, rgba(116,197,252,0.3), #74c0fc); transition: width 0.6s;"></div>
             </div>
@@ -122,12 +122,12 @@
             <div style="width: 100%; height: 20px; background: rgba(10,13,19,0.8); border-radius: 3px; overflow: hidden; border: 1px solid rgba(184,94,255,0.3); position: relative;">
               <div style="position: absolute; left: 0; height: 100%; width: ${targetPercent}%; background: linear-gradient(90deg, #b85eff, rgba(184,94,255,0.3)); transition: width 0.6s;"></div>
             </div>
-            <div style="font-family: 'Fira Code', monospace; font-size: 0.7rem; color: #b85eff; min-width: 35px;">${targetVal.toFixed(1)}</div>
+            <div style="font-family: 'Fira Code', monospace; font-size: 0.7rem; color: #b85eff; min-width: 35px;">${targetVal.toFixed(2)}</div>
           </div>
           
           <!-- Difference indicator -->
-          <div style="min-width: 40px; text-align: center; font-size: 0.65rem; color: ${diff < 2 ? '#51cf66' : diff < 5 ? '#ffd43b' : '#ff6b6b'}; font-family: 'Fira Code', monospace;">
-            Δ${diff.toFixed(1)}
+          <div style="min-width: 40px; text-align: center; font-size: 0.65rem; color: ${diff < 0.2 ? '#51cf66' : diff < 0.5 ? '#ffd43b' : '#ff6b6b'}; font-family: 'Fira Code', monospace;">
+            Δ${diff.toFixed(2)}
           </div>
         </div>
       `;
@@ -155,7 +155,7 @@
           <span style="color: #b85eff;">-1.0</span> = Charts are inverted (complementarity)
         </div>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(94,197,255,0.15); font-size: 0.7rem; color: #6a7fa0; font-style: italic;">
-          Subject: ${currentSubject.name}<br>Target: ${currentTarget.name}
+          Subject: ${UIManager.escapeHtml(currentSubject.name)}<br>Target: ${UIManager.escapeHtml(currentTarget.name)}
         </div>
       </div>
     </div>`;

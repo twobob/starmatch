@@ -3,8 +3,19 @@ const ChartRenderer = (function() {
 
   // Convert zodiac longitude to canvas angle (in radians)
   // This is the SINGLE SOURCE OF TRUTH for longitude→angle conversion (counter-clockwise)
+  // The Ascendant sits at 9 o'clock (180°), the equal house cusp line marked AC
   function longitudeToCanvasAngle(longitude, ascendant) {
-    return (((180 + ascendant + AstroConstants.ZODIAC_ROTATION_OFFSET - longitude) % 360) * Math.PI) / 180;
+    return ((((180 + ascendant - longitude) % 360) + 360) % 360) * Math.PI / 180;
+  }
+
+  // Orb for an aspect between two planets, chosen as engine.js does:
+  // aspect orbs (ao), or half the sum of the two planets' orbs (po) when planet orbs are selected
+  function getAspectOrb(aspectIndex, planetIndex1, planetIndex2) {
+    if (window.orbType === 1) {
+      const orbs = window.po[window.poIndex];
+      return 0.5 * (orbs[planetIndex1] + orbs[planetIndex2]);
+    }
+    return window.ao[window.aoIndex][aspectIndex];
   }
 
   function calculatePlanetPositionsWithCollisionDetection(positions, ascendant, centerX, centerY, baseRadius, collisionThreshold = 25, stackOffset = 15) {
@@ -94,8 +105,8 @@ const ChartRenderer = (function() {
         if (diff > 180) diff = 360 - diff;
 
         for (const aspectAngle of aspectAngles) {
-          const orb = window.orbType === 0 ? window.ao[window.aoIndex][aspectAngles.indexOf(aspectAngle)] : 8;
-          if (Math.abs(diff - aspectAngle) <= orb) {
+          const orb = getAspectOrb(aspectAngles.indexOf(aspectAngle), p1.index, p2.index);
+          if (Math.abs(diff - aspectAngle) < orb) {
             const planet1Data = planetsArray.find(p => p.name === p1.name);
             const planet2Data = planetsArray.find(p => p.name === p2.name);
             
@@ -173,7 +184,7 @@ const ChartRenderer = (function() {
       return AstroConstants.ELEMENT_COLOURS[element];
     };
 
-    const offset = 180 + ascendant + AstroConstants.ZODIAC_ROTATION_OFFSET;
+    const offset = 180 + ascendant;
     for (let i = 0; i < 12; i++) {
       const segmentLongitude = (i * 30) % 360;
       const startDeg = (-segmentLongitude + offset) % 360;
@@ -233,7 +244,7 @@ const ChartRenderer = (function() {
       ctx.translate(symbolX, symbolY);
       ctx.rotate(labelAngle + Math.PI / 2);
       ctx.fillStyle = getSignColour(signIndex);
-      ctx.font = `bold ${symbolFontSize}px Arial`;
+      ctx.font = `${symbolFontSize}px "Segoe UI Symbol", "Noto Sans Symbols 2", "Noto Sans Symbols", "DejaVu Sans", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(AstroConstants.SIGN_SYMBOLS[signIndex], 0, 0);
@@ -319,8 +330,7 @@ const ChartRenderer = (function() {
       markerSize = 8
     } = options;
 
-    // Calculate MC angle with 42 degree adjustment
-    const mcAngle = longitudeToCanvasAngle(midheaven, ascendant) - (42 * Math.PI / 180);
+    const mcAngle = longitudeToCanvasAngle(midheaven, ascendant);
     const mcX = centerX + Math.cos(mcAngle) * outerRadius;
     const mcY = centerY + Math.sin(mcAngle) * outerRadius;
     
@@ -361,6 +371,7 @@ const ChartRenderer = (function() {
 
   return {
     longitudeToCanvasAngle,
+    getAspectOrb,
     calculatePlanetPositionsWithCollisionDetection,
     getPlanetColourByLongitude,
     calculateAspects,

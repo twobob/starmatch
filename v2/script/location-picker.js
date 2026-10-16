@@ -195,8 +195,8 @@ class LocationPicker {
       const lon = parseFloat(result.lon);
       
       item.innerHTML = `
-        <div class="result-name">${this.formatLocationName(result)}</div>
-        <div class="result-details">${this.truncateAddress(details)}</div>
+        <div class="result-name">${UIManager.escapeHtml(this.formatLocationName(result))}</div>
+        <div class="result-details">${UIManager.escapeHtml(this.truncateAddress(details))}</div>
         <div class="result-coords">📍 ${lat.toFixed(4)}°, ${lon.toFixed(4)}°</div>
       `;
       
