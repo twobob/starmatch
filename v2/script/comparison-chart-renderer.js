@@ -602,9 +602,7 @@ const ComparisonChartRenderer = (function() {
         }
         
         compTooltip.innerHTML = tooltipHTML;
-        compTooltip.style.display = 'block';
-        compTooltip.style.left = (evt.clientX + 15) + 'px';
-        compTooltip.style.top = (evt.clientY + 15) + 'px';
+        UIManager.placeTooltip(compTooltip, evt);
         compCanvas.style.cursor = 'pointer';
       } else {
         compTooltip.style.display = 'none';

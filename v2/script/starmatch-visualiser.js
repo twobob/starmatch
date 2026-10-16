@@ -848,11 +848,14 @@ function drawComparisonChart(subjectPos, targetPos, subjectAsc, targetAsc) {
   
   const compCtx = compCanvas.getContext('2d');
   
-  // Get the tooltip element (created dynamically in the HTML)
-  const compTooltip = document.getElementById('comparison-tooltip');
+  // One tooltip at the top level of the page, created on first use: inside the
+  // results it sat in panels whose backdrop-filter offset its fixed position
+  let compTooltip = document.getElementById('comparison-tooltip');
   if (!compTooltip) {
-    console.error('Comparison tooltip element not found');
-    return;
+    compTooltip = document.createElement('div');
+    compTooltip.id = 'comparison-tooltip';
+    compTooltip.className = 'chart-tooltip';
+    document.body.appendChild(compTooltip);
   }
   
   // Use ComparisonChartRenderer module to draw the comparison chart

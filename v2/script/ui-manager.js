@@ -178,6 +178,28 @@ const UIManager = (function() {
     };
   }
 
+  /**
+   * Show a chart tooltip next to the pointer, kept inside the window.
+   * Tooltips are position: fixed, which only follows the window when the
+   * element is not inside a panel with a filter, backdrop-filter or transform
+   * (those make "fixed" relative to the panel), so the tooltip is moved to the
+   * top level of the page first.
+   */
+  function placeTooltip(tooltip, evt) {
+    if (tooltip.parentElement !== document.body) document.body.appendChild(tooltip);
+    tooltip.style.display = 'block';
+    const gap = 15;
+    const margin = 8;
+    const width = tooltip.offsetWidth;
+    const height = tooltip.offsetHeight;
+    let x = evt.clientX + gap;
+    let y = evt.clientY + gap;
+    if (x + width > window.innerWidth - margin) x = evt.clientX - gap - width;
+    if (y + height > window.innerHeight - margin) y = evt.clientY - gap - height;
+    tooltip.style.left = Math.max(margin, x) + 'px';
+    tooltip.style.top = Math.max(margin, y) + 'px';
+  }
+
   // Escape text for use inside innerHTML (record names and fields can come from imported files)
   function escapeHtml(value) {
     return String(value === undefined || value === null ? '' : value).replace(/[&<>"']/g,
@@ -404,9 +426,7 @@ const UIManager = (function() {
       }
       
       tooltip.innerHTML = tooltipHTML;
-      tooltip.style.display = 'block';
-      tooltip.style.left = (evt.clientX + 15) + 'px';
-      tooltip.style.top = (evt.clientY + 15) + 'px';
+      placeTooltip(tooltip, evt);
       canvas.style.cursor = 'pointer';
     } else {
       tooltip.style.display = 'none';
@@ -440,6 +460,7 @@ const UIManager = (function() {
     updateTooltip,
     getMousePos,
     distanceToLineSegment,
+    placeTooltip,
 
     // Safe HTML
     escapeHtml

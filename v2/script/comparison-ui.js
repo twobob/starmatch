@@ -84,7 +84,6 @@
       <div style="padding: 1rem; background: rgba(10,13,19,0.6); border-radius: 8px; border: 1px solid rgba(94,197,255,0.15);">
         <h4 style="color: var(--accent); margin-top: 0; margin-bottom: 0.75rem; font-size: 0.9rem;">Chart Overlay</h4>
         <canvas id="comparison-chart-canvas" width="400" height="400" style="width: 100%; max-width: 400px; aspect-ratio: 1/1; display: block; margin: 0 auto;"></canvas>
-        <div id="comparison-tooltip" class="chart-tooltip"></div>
         <div style="margin-top: 0.75rem; font-size: 0.7rem; color: #8fa8ce; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.5rem;">
           <div style="flex: 1 1 10rem; text-align: center;"><span style="color: #74c0fc;">●</span> Subject (${UIManager.escapeHtml(currentSubject.name)})</div>
           <div style="flex: 1 1 10rem; text-align: center;"><span style="color: #b85eff;">●</span> Target (${UIManager.escapeHtml(currentTarget.name)})</div>

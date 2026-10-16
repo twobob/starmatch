@@ -113,6 +113,12 @@ Interface:
 - Long record names no longer push the Subject and Target pickers off the
   screen; the dropdown shortens them with an ellipsis.
 - The overlay chart legend wraps one entry per line when space is tight.
+- Chart tooltips appear next to the pointer. On the starfield page they could
+  land far away (over 1,500 pixels for the overlay chart): the frosted panels'
+  backdrop-filter made their fixed position relative to the panel, not the
+  window. Tooltips now live at the top level of the page and flip to the other
+  side of the pointer near the edges, so they stay on screen.
+- The page title is just "Starmatch".
 - Every checkbox uses the accent colour, and the orb set that doesn't apply is
   clearly dimmed.
 
